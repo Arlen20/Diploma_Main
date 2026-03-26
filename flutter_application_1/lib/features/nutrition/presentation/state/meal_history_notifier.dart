@@ -1,60 +1,55 @@
-import 'dart:convert';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../../core/auth/firebase_auth_providers.dart';
+import '../../data/repositories/meal_history_repository.dart';
 import '../../domain/entities/meal_log.dart';
+import '../../domain/entities/meal_result.dart';
 
-class MealHistoryNotifier extends StateNotifier<List<MealLog>> {
-  static const _storageKey = 'meal_history';
+final mealHistoryRepositoryProvider = Provider<MealHistoryRepository>(
+  (ref) => MealHistoryRepository(),
+);
 
-  MealHistoryNotifier() : super(const []) {
-    _load();
+class MealHistoryNotifier extends StateNotifier<AsyncValue<List<MealLog>>> {
+  MealHistoryNotifier(this._repository) : super(const AsyncValue.loading()) {
+    load();
   }
 
-  void add(MealLog log) {
-    state = [log, ...state]; // newest first
-    _save();
+  final MealHistoryRepository _repository;
+
+  Future<void> load() async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(_repository.load);
   }
 
-  void removeAt(int index) {
-    if (index < 0 || index >= state.length) return;
-    state = [...state]..removeAt(index);
-    _save();
+  Future<void> add(MealResult result) async {
+    final current = state.valueOrNull ?? const <MealLog>[];
+    final log = await _repository.add(result);
+    if (log == null) return;
+    state = AsyncValue.data([log, ...current]);
   }
 
-  void clear() {
-    state = const [];
-    _save();
-  }
-
-  Future<void> _load() async {
+  Future<void> remove(String id) async {
+    final current = state.valueOrNull ?? const <MealLog>[];
+    state = AsyncValue.data(current.where((item) => item.id != id).toList());
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString(_storageKey);
-      if (raw == null || raw.isEmpty) return;
-      final decoded = jsonDecode(raw) as List<dynamic>;
-      state = decoded
-          .map((e) => MealLog.fromJson(e as Map<String, dynamic>))
-          .toList();
-    } catch (_) {
-      // If parsing fails, keep empty state.
+      await _repository.remove(id);
+    } catch (error, stackTrace) {
+      state = AsyncValue.error(error, stackTrace);
     }
   }
 
-  Future<void> _save() async {
+  Future<void> clear() async {
+    state = const AsyncValue.data(<MealLog>[]);
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final payload =
-          jsonEncode(state.map((e) => e.toJson()).toList(growable: false));
-      await prefs.setString(_storageKey, payload);
-    } catch (_) {
-      // Best-effort persistence.
+      await _repository.clear();
+    } catch (error, stackTrace) {
+      state = AsyncValue.error(error, stackTrace);
     }
   }
 }
 
 final mealHistoryProvider =
-    StateNotifierProvider<MealHistoryNotifier, List<MealLog>>(
-      (ref) => MealHistoryNotifier(),
-    );
+    StateNotifierProvider<MealHistoryNotifier, AsyncValue<List<MealLog>>>((ref) {
+      ref.watch(authStateProvider);
+      return MealHistoryNotifier(ref.watch(mealHistoryRepositoryProvider));
+    });

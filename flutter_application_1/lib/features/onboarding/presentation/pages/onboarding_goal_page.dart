@@ -1,22 +1,47 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/routing/app_routes.dart';
-import '../../../../core/widgets/gradient_background.dart';
 import '../../../../core/widgets/glass_card.dart';
+import '../../../../core/widgets/gradient_background.dart';
+import '../../../profile_settings/presentation/state/user_profile_provider.dart';
 
-class OnboardingGoalPage extends StatefulWidget {
+class OnboardingGoalPage extends ConsumerStatefulWidget {
   const OnboardingGoalPage({super.key});
 
   @override
-  State<OnboardingGoalPage> createState() => _OnboardingGoalPageState();
+  ConsumerState<OnboardingGoalPage> createState() => _OnboardingGoalPageState();
 }
 
-class _OnboardingGoalPageState extends State<OnboardingGoalPage> {
-  int selected = 0; // 0 lose, 1 maintain, 2 gain
+class _OnboardingGoalPageState extends ConsumerState<OnboardingGoalPage> {
+  static const _goals = ['Lose weight', 'Maintain', 'Gain muscle'];
+  bool _initialized = false;
+  int selected = 0;
+
+  void _goToMetrics() {
+    context.go(
+      AppRoutes.onboardingMetrics,
+      extra: <String, dynamic>{'goal': _goals[selected]},
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final extra = GoRouterState.of(context).extra;
+    final payload = extra is Map<String, dynamic>
+        ? Map<String, dynamic>.from(extra)
+        : <String, dynamic>{};
+    final profileState = ref.watch(userProfileProvider);
+    final profile = profileState.valueOrNull;
+
+    if (!_initialized) {
+      final currentGoal = payload['goal'] as String? ?? profile?.goal;
+      final index = _goals.indexOf(currentGoal ?? '');
+      selected = index >= 0 ? index : 1;
+      _initialized = true;
+    }
+
     return Scaffold(
       body: GradientBackground(
         child: SafeArea(
@@ -29,7 +54,7 @@ class _OnboardingGoalPageState extends State<OnboardingGoalPage> {
                   children: [
                     const SizedBox(height: 8),
                     const Text(
-                      "Let’s set\nyour goal",
+                      "Let's set\nyour goal",
                       style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w900,
@@ -39,7 +64,7 @@ class _OnboardingGoalPageState extends State<OnboardingGoalPage> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      "Choose one. You can change it later in Settings.",
+                      'Choose one. You can change it later in Settings.',
                       style: TextStyle(
                         color: Colors.white.withOpacity(0.65),
                         fontWeight: FontWeight.w700,
@@ -47,10 +72,9 @@ class _OnboardingGoalPageState extends State<OnboardingGoalPage> {
                       ),
                     ),
                     const SizedBox(height: 18),
-
                     _GoalTile(
-                      title: "Lose weight",
-                      subtitle: "Cut calories & track meals",
+                      title: 'Lose weight',
+                      subtitle: 'Cut calories and track meals',
                       icon: Icons.trending_down_rounded,
                       isSelected: selected == 0,
                       accent: const Color(0xFFFFCDEB),
@@ -58,8 +82,8 @@ class _OnboardingGoalPageState extends State<OnboardingGoalPage> {
                     ),
                     const SizedBox(height: 12),
                     _GoalTile(
-                      title: "Maintain",
-                      subtitle: "Stay consistent & build habits",
+                      title: 'Maintain',
+                      subtitle: 'Stay consistent and build habits',
                       icon: Icons.auto_graph_rounded,
                       isSelected: selected == 1,
                       accent: const Color(0xFFF4F0B6),
@@ -67,40 +91,35 @@ class _OnboardingGoalPageState extends State<OnboardingGoalPage> {
                     ),
                     const SizedBox(height: 12),
                     _GoalTile(
-                      title: "Gain muscle",
-                      subtitle: "More protein & strength sessions",
+                      title: 'Gain muscle',
+                      subtitle: 'More protein and strength sessions',
                       icon: Icons.fitness_center_rounded,
                       isSelected: selected == 2,
                       accent: const Color(0xFFCFE8FF),
                       onTap: () => setState(() => selected = 2),
                     ),
-
                     const Spacer(),
-
-                    // little progress hint
                     Row(
-                      children: [
+                      children: const [
                         _Dot(active: true),
-                        const SizedBox(width: 6),
+                        SizedBox(width: 6),
                         _Dot(active: false),
-                        const SizedBox(width: 6),
+                        SizedBox(width: 6),
                         _Dot(active: false),
                       ],
                     ),
                   ],
                 ),
               ),
-
-              // bottom CTA
               Positioned(
                 left: 18,
                 right: 18,
                 bottom: 18,
                 child: _BottomBar(
-                  primaryText: "Continue",
-                  secondaryText: "Skip",
-                  onPrimary: () => context.go(AppRoutes.onboardingMetrics),
-                  onSecondary: () => context.go(AppRoutes.onboardingMetrics),
+                  primaryText: 'Continue',
+                  secondaryText: 'Skip',
+                  onPrimary: _goToMetrics,
+                  onSecondary: _goToMetrics,
                 ),
               ),
             ],
@@ -180,7 +199,6 @@ class _GoalTile extends StatelessWidget {
                 borderRadius: BorderRadius.circular(999),
                 border: Border.all(
                   color: Colors.white.withOpacity(isSelected ? 0.0 : 0.35),
-                  width: 1,
                 ),
               ),
               child: isSelected
@@ -196,6 +214,7 @@ class _GoalTile extends StatelessWidget {
 
 class _Dot extends StatelessWidget {
   final bool active;
+
   const _Dot({required this.active});
 
   @override
@@ -227,7 +246,7 @@ class _BottomBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GlassCard(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+      padding: const EdgeInsets.all(12),
       child: Row(
         children: [
           Expanded(
@@ -262,9 +281,9 @@ class _BottomBar extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 elevation: 0,
               ),
-              child: const Text(
-                "Continue",
-                style: TextStyle(
+              child: Text(
+                primaryText,
+                style: const TextStyle(
                   fontWeight: FontWeight.w900,
                   color: Color(0xFF1C1C27),
                 ),

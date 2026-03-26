@@ -1,79 +1,50 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../auth/firebase_auth_providers.dart';
 import 'app_routes.dart';
-
-// ✅ Import real pages (create these files first)
+import 'package:flutter_application_1/core/routing/splash_page.dart';
+import 'package:flutter_application_1/features/auth/presentation/pages/check_inbox_page.dart';
+import 'package:flutter_application_1/features/auth/presentation/pages/forgot_password_page.dart';
 import 'package:flutter_application_1/features/auth/presentation/pages/login_page.dart';
 import 'package:flutter_application_1/features/auth/presentation/pages/register_page.dart';
-import 'package:flutter_application_1/features/auth/presentation/pages/check_inbox_page.dart';
-import 'package:flutter_application_1/features/onboarding/presentation/pages/onboarding_page.dart';
+import 'package:flutter_application_1/features/auth/presentation/pages/verification_success_page.dart';
 import 'package:flutter_application_1/features/home/presentation/pages/home_shell_page.dart';
 import 'package:flutter_application_1/features/nutrition/presentation/pages/add_meal_page.dart';
 import 'package:flutter_application_1/features/nutrition/presentation/pages/analyzing_meal_page.dart';
-import 'package:flutter_application_1/features/nutrition/presentation/pages/meal_result_page.dart';
 import 'package:flutter_application_1/features/nutrition/presentation/pages/meal_history_page.dart';
-import 'package:flutter_application_1/core/routing/splash_page.dart'; // you can also put splash in features
-import 'package:flutter_application_1/features/plan/presentation/pages/weekly_plan_page.dart';
-import 'package:flutter_application_1/features/stats/presentation/pages/stats_page.dart';
-import 'package:flutter_application_1/features/profile_settings/presentation/pages/settings_page.dart';
+import 'package:flutter_application_1/features/nutrition/presentation/pages/meal_result_page.dart';
+import 'package:flutter_application_1/features/plan/presentation/pages/training_success_page.dart';
+import 'package:flutter_application_1/features/onboarding/presentation/pages/onboarding_finish_page.dart';
 import 'package:flutter_application_1/features/onboarding/presentation/pages/onboarding_goal_page.dart';
 import 'package:flutter_application_1/features/onboarding/presentation/pages/onboarding_metrics_page.dart';
-import 'package:flutter_application_1/features/onboarding/presentation/pages/onboarding_finish_page.dart';
+import 'package:flutter_application_1/features/onboarding/presentation/pages/onboarding_page.dart';
+import 'package:flutter_application_1/features/plan/presentation/pages/weekly_plan_page.dart';
+import 'package:flutter_application_1/features/profile_settings/presentation/pages/settings_page.dart';
+import 'package:flutter_application_1/features/profile_settings/presentation/state/user_profile_provider.dart';
+import 'package:flutter_application_1/features/stats/presentation/pages/stats_page.dart';
 
-// --- App state (fake for now) ---
-class AppSessionState {
-  final bool isLoggedIn;
-  final bool isEmailVerified;
-  final bool isOnboardingDone;
-
-  const AppSessionState({
-    required this.isLoggedIn,
-    required this.isEmailVerified,
-    required this.isOnboardingDone,
-  });
-
-  AppSessionState copyWith({
-    bool? isLoggedIn,
-    bool? isEmailVerified,
-    bool? isOnboardingDone,
-  }) {
-    return AppSessionState(
-      isLoggedIn: isLoggedIn ?? this.isLoggedIn,
-      isEmailVerified: isEmailVerified ?? this.isEmailVerified,
-      isOnboardingDone: isOnboardingDone ?? this.isOnboardingDone,
-    );
-  }
-
-  static const initial = AppSessionState(
-    isLoggedIn: false,
-    isEmailVerified: false,
-    isOnboardingDone: false,
-  );
+class _RouterRefreshNotifier extends ChangeNotifier {
+  void refresh() => notifyListeners();
 }
 
-class AppSessionNotifier extends StateNotifier<AppSessionState> {
-  AppSessionNotifier() : super(AppSessionState.initial);
+final _routerRefreshProvider = Provider<_RouterRefreshNotifier>((ref) {
+  final notifier = _RouterRefreshNotifier();
 
-  // Dummy methods (later connect Firebase)
-  void login() => state = state.copyWith(isLoggedIn: true);
-  void logout() => state = AppSessionState.initial;
+  ref.listen(authStateProvider, (_, __) => notifier.refresh());
+  ref.listen(userProfileProvider, (_, __) => notifier.refresh());
+  ref.onDispose(notifier.dispose);
 
-  void markEmailVerified() => state = state.copyWith(isEmailVerified: true);
-  void completeOnboarding() => state = state.copyWith(isOnboardingDone: true);
-}
+  return notifier;
+});
 
-final appSessionProvider =
-    StateNotifierProvider<AppSessionNotifier, AppSessionState>(
-      (ref) => AppSessionNotifier(),
-    );
-
-// router provider
 final goRouterProvider = Provider<GoRouter>((ref) {
-  final session = ref.watch(appSessionProvider);
+  final refreshListenable = ref.watch(_routerRefreshProvider);
 
   return GoRouter(
     initialLocation: AppRoutes.splash,
+    refreshListenable: refreshListenable,
     routes: [
       GoRoute(
         path: AppRoutes.splash,
@@ -88,8 +59,16 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const RegisterPage(),
       ),
       GoRoute(
+        path: AppRoutes.forgotPassword,
+        builder: (context, state) => const ForgotPasswordPage(),
+      ),
+      GoRoute(
         path: AppRoutes.checkInbox,
         builder: (context, state) => const CheckInboxPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.verificationSuccess,
+        builder: (context, state) => const VerificationSuccessPage(),
       ),
       GoRoute(
         path: AppRoutes.onboarding,
@@ -120,6 +99,10 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const WeeklyPlanPage(),
       ),
       GoRoute(
+        path: AppRoutes.trainingSuccess,
+        builder: (context, state) => const TrainingSuccessPage(),
+      ),
+      GoRoute(
         path: AppRoutes.stats,
         builder: (context, state) => const StatsPage(),
       ),
@@ -140,30 +123,46 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const OnboardingFinishPage(),
       ),
     ],
-
-    // Redirect logic
     redirect: (context, state) {
+      final authState = ref.read(authStateProvider);
+      final profileState = ref.read(userProfileProvider);
       final loc = state.uri.toString();
-
-      final isAuthRoute =
+      final isPublicRoute =
+          loc == AppRoutes.splash ||
           loc == AppRoutes.login ||
           loc == AppRoutes.register ||
-          loc == AppRoutes.checkInbox;
+          loc == AppRoutes.forgotPassword;
 
-      // Not logged in -> go login (except auth pages)
-      if (!session.isLoggedIn) {
-        return isAuthRoute ? null : AppRoutes.login;
+      if (authState.isLoading) {
+        return loc == AppRoutes.splash ? null : AppRoutes.splash;
       }
 
-      // Logged in but email not verified -> go check inbox
-      if (session.isLoggedIn && !session.isEmailVerified) {
+      final user = authState.valueOrNull;
+      if (user == null) {
+        return isPublicRoute ? null : AppRoutes.login;
+      }
+
+      if (!user.emailVerified) {
         return loc == AppRoutes.checkInbox ? null : AppRoutes.checkInbox;
       }
 
-      if (session.isLoggedIn &&
-          session.isEmailVerified &&
-          !session.isOnboardingDone) {
-        // force start of onboarding flow
+      if (loc == AppRoutes.verificationSuccess) {
+        return null;
+      }
+
+      if (profileState.isLoading) {
+        if (loc == AppRoutes.onboardingGoal ||
+            loc == AppRoutes.onboardingMetrics ||
+            loc == AppRoutes.onboardingFinish ||
+            loc == AppRoutes.home) {
+          return null;
+        }
+        return AppRoutes.onboardingGoal;
+      }
+
+      final profile = profileState.valueOrNull;
+      final onboardingDone = profile?.onboardingCompleted ?? false;
+      if (!onboardingDone) {
         if (loc == AppRoutes.onboardingGoal ||
             loc == AppRoutes.onboardingMetrics ||
             loc == AppRoutes.onboardingFinish) {
@@ -172,15 +171,16 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         return AppRoutes.onboardingGoal;
       }
 
-      // If fully ready, block access to auth pages
-      if (session.isLoggedIn &&
-          session.isEmailVerified &&
-          session.isOnboardingDone &&
-          isAuthRoute) {
+      if (loc == AppRoutes.onboardingGoal ||
+          loc == AppRoutes.onboardingMetrics ||
+          loc == AppRoutes.onboardingFinish) {
         return AppRoutes.home;
       }
 
-      // Splash should push to home once state is known
+      if (isPublicRoute || loc == AppRoutes.checkInbox) {
+        return AppRoutes.home;
+      }
+
       if (loc == AppRoutes.splash) {
         return AppRoutes.home;
       }

@@ -3,9 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/routing/app_routes.dart';
-import '../../../../core/routing/app_router.dart'; // contains appSessionProvider
-import '../../../../core/widgets/gradient_background.dart';
 import '../../../../core/widgets/glass_card.dart';
+import '../../../../core/widgets/gradient_background.dart';
+import '../../../profile_settings/domain/entities/user_profile.dart';
+import '../../../profile_settings/presentation/state/user_profile_provider.dart';
 
 class OnboardingFinishPage extends ConsumerWidget {
   const OnboardingFinishPage({super.key});
@@ -13,38 +14,48 @@ class OnboardingFinishPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final extra = GoRouterState.of(context).extra;
+    final map = extra is Map<String, dynamic>
+        ? Map<String, dynamic>.from(extra)
+        : <String, dynamic>{};
+    final currentProfile =
+        ref.watch(userProfileProvider).valueOrNull ?? UserProfile.empty;
 
-    // ---- Safe parse from state.extra (handles int/double/String/null) ----
-    final map = (extra is Map<String, dynamic>) ? extra : <String, dynamic>{};
-
-    final goal = _asString(map["goal"], fallback: "Maintain");
-    final weightNum = _asNum(map["weight"], fallback: 70);
-    final heightNum = _asNum(map["height"], fallback: 175);
+    final goal = _asString(map['goal'], fallback: currentProfile.goal);
+    final weightNum = _asNum(map['weight'], fallback: currentProfile.weightKg);
+    final heightNum = _asNum(map['height'], fallback: currentProfile.heightCm);
+    final ageNum = _asNum(map['age'], fallback: currentProfile.age);
 
     final weight = weightNum.toStringAsFixed(0);
     final height = heightNum.toStringAsFixed(0);
+    final age = ageNum.toStringAsFixed(0);
+    final profileToSave = currentProfile.copyWith(
+      goal: goal,
+      weightKg: weightNum.round(),
+      heightCm: heightNum.round(),
+      age: ageNum.round(),
+    );
 
     return Scaffold(
       body: GradientBackground(
         child: SafeArea(
           child: Stack(
             children: [
-              // Main content (scroll-safe + bottom padding for CTA)
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 18, 20, 110),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Back
                     IconButton(
-                      onPressed: () => context.pop(),
+                      onPressed: () => context.go(
+                        AppRoutes.onboardingMetrics,
+                        extra: map,
+                      ),
                       icon: const Icon(Icons.arrow_back, color: Colors.white),
                       splashRadius: 22,
                     ),
                     const SizedBox(height: 6),
-
                     const Text(
-                      "You’re\nready ✨",
+                      "You're\nready",
                       style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w900,
@@ -54,7 +65,7 @@ class OnboardingFinishPage extends ConsumerWidget {
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      "Confirm your setup before we continue.",
+                      'Confirm your setup before we continue.',
                       style: TextStyle(
                         color: Colors.white.withOpacity(0.65),
                         fontWeight: FontWeight.w700,
@@ -62,15 +73,13 @@ class OnboardingFinishPage extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(height: 18),
-
-                    // Summary card
                     GlassCard(
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                      padding: const EdgeInsets.all(16),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
-                            "Your setup",
+                            'Your setup',
                             style: TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.w900,
@@ -78,19 +87,17 @@ class OnboardingFinishPage extends ConsumerWidget {
                             ),
                           ),
                           const SizedBox(height: 12),
-
-                          _RowItem(label: "Goal", value: goal),
+                          _RowItem(label: 'Goal', value: goal),
                           const SizedBox(height: 10),
-                          _RowItem(label: "Weight", value: "$weight kg"),
+                          _RowItem(label: 'Weight', value: '$weight kg'),
                           const SizedBox(height: 10),
-                          _RowItem(label: "Height", value: "$height cm"),
+                          _RowItem(label: 'Height', value: '$height cm'),
+                          const SizedBox(height: 10),
+                          _RowItem(label: 'Age', value: '$age years'),
                         ],
                       ),
                     ),
-
                     const Spacer(),
-
-                    // Progress dots (3/3)
                     Row(
                       children: const [
                         _Dot(active: false),
@@ -103,14 +110,12 @@ class OnboardingFinishPage extends ConsumerWidget {
                   ],
                 ),
               ),
-
-              // Bottom CTA bar
               Positioned(
                 left: 18,
                 right: 18,
                 bottom: 18,
                 child: GlassCard(
-                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+                  padding: const EdgeInsets.all(12),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -118,13 +123,15 @@ class OnboardingFinishPage extends ConsumerWidget {
                         width: double.infinity,
                         height: 52,
                         child: ElevatedButton(
-                          onPressed: () {
-                            // Mark onboarding as done (your existing session logic)
-                            ref
-                                .read(appSessionProvider.notifier)
-                                .completeOnboarding();
-
-                            // Go home
+                          onPressed: () async {
+                            await ref
+                                .read(userProfileProvider.notifier)
+                                .save(
+                                  profileToSave.copyWith(
+                                    onboardingCompleted: true,
+                                  ),
+                                );
+                            if (!context.mounted) return;
                             context.go(AppRoutes.home);
                           },
                           style: ElevatedButton.styleFrom(
@@ -135,7 +142,7 @@ class OnboardingFinishPage extends ConsumerWidget {
                             ),
                           ),
                           child: const Text(
-                            "Finish & Go Home",
+                            'Finish and go home',
                             style: TextStyle(
                               fontWeight: FontWeight.w900,
                               color: Color(0xFF1C1C27),
@@ -145,7 +152,7 @@ class OnboardingFinishPage extends ConsumerWidget {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        "Onboarding (3/3)",
+                        'Onboarding (3/3)',
                         style: TextStyle(
                           color: Colors.white.withOpacity(0.55),
                           fontWeight: FontWeight.w800,
@@ -164,24 +171,22 @@ class OnboardingFinishPage extends ConsumerWidget {
   }
 }
 
-// ---------- Helpers ----------
-num _asNum(dynamic v, {required num fallback}) {
-  if (v == null) return fallback;
-  if (v is num) return v;
-  if (v is String) {
-    final parsed = num.tryParse(v.trim());
-    return parsed ?? fallback;
+num _asNum(dynamic value, {required num fallback}) {
+  if (value == null) return fallback;
+  if (value is num) return value;
+  if (value is String) {
+    return num.tryParse(value.trim()) ?? fallback;
   }
   return fallback;
 }
 
-String _asString(dynamic v, {required String fallback}) {
-  if (v == null) return fallback;
-  if (v is String && v.trim().isNotEmpty) return v.trim();
+String _asString(dynamic value, {required String fallback}) {
+  if (value is String && value.trim().isNotEmpty) {
+    return value.trim();
+  }
   return fallback;
 }
 
-// ---------- UI Bits ----------
 class _RowItem extends StatelessWidget {
   final String label;
   final String value;
@@ -217,6 +222,7 @@ class _RowItem extends StatelessWidget {
 
 class _Dot extends StatelessWidget {
   final bool active;
+
   const _Dot({required this.active});
 
   @override

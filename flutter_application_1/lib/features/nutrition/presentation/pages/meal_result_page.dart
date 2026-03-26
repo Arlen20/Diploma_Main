@@ -1,11 +1,10 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_application_1/core/routing/app_routes.dart';
 
 import '../../domain/entities/meal_result.dart';
-import '../../domain/entities/meal_log.dart';
-import '../state/meal_history_notifier.dart'; // adjust import to your provider
+import '../state/meal_history_notifier.dart';
 
 class MealResultPage extends ConsumerStatefulWidget {
   const MealResultPage({super.key});
@@ -19,7 +18,14 @@ class _MealResultPageState extends ConsumerState<MealResultPage> {
 
   @override
   Widget build(BuildContext context) {
-    final result = GoRouterState.of(context).extra as MealResult;
+    final extra = GoRouterState.of(context).extra;
+    final payload = extra is Map<String, dynamic>
+        ? Map<String, dynamic>.from(extra)
+        : null;
+    final result = payload != null
+        ? payload['result'] as MealResult
+        : extra as MealResult;
+    final isReadOnly = payload?['readOnly'] == true;
 
     return Scaffold(
       body: Container(
@@ -39,17 +45,15 @@ class _MealResultPageState extends ConsumerState<MealResultPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 6),
-                const Text(
-                  'Estimated nutrition',
-                  style: TextStyle(
+                Text(
+                  isReadOnly ? 'Saved meal details' : 'Estimated nutrition',
+                  style: const TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w900,
                     color: Color(0xFF1C1C27),
                   ),
                 ),
                 const SizedBox(height: 14),
-
-                // big card
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(14),
@@ -60,20 +64,16 @@ class _MealResultPageState extends ConsumerState<MealResultPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // image
                       ClipRRect(
                         borderRadius: BorderRadius.circular(18),
                         child: Image.asset(
-                          "assets/images/meal.jpg",
+                          'assets/images/meal.jpg',
                           height: 180,
                           width: double.infinity,
                           fit: BoxFit.cover,
                         ),
                       ),
-
                       const SizedBox(height: 12),
-
-                      // kcal row
                       Row(
                         children: [
                           Container(
@@ -91,7 +91,7 @@ class _MealResultPageState extends ConsumerState<MealResultPage> {
                           ),
                           const SizedBox(width: 12),
                           Text(
-                            "${result.calories} ",
+                            '${result.calories} ',
                             style: const TextStyle(
                               fontSize: 28,
                               fontWeight: FontWeight.w900,
@@ -99,7 +99,7 @@ class _MealResultPageState extends ConsumerState<MealResultPage> {
                             ),
                           ),
                           const Text(
-                            "kcal",
+                            'kcal',
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w900,
@@ -108,107 +108,117 @@ class _MealResultPageState extends ConsumerState<MealResultPage> {
                           ),
                         ],
                       ),
-
                       const SizedBox(height: 10),
                       Divider(color: const Color(0xFF1C1C27).withOpacity(0.10)),
                       const SizedBox(height: 12),
-
-                      // macros
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           _MacroChip(
                             color: const Color(0xFFF4F0B6),
                             icon: Icons.egg_alt_outlined,
-                            value: "${result.protein}g",
-                            label: "Protein",
+                            value: '${result.protein}g',
+                            label: 'Protein',
                           ),
                           _MacroChip(
                             color: const Color(0xFFE0D2FF),
                             icon: Icons.grain,
-                            value: "${result.carbs}g",
-                            label: "Carbs",
+                            value: '${result.carbs}g',
+                            label: 'Carbs',
                           ),
                           _MacroChip(
                             color: const Color(0xFFFFCDEB),
                             icon: Icons.opacity_outlined,
-                            value: "${result.fat}g",
-                            label: "Fat",
+                            value: '${result.fat}g',
+                            label: 'Fat',
                           ),
                         ],
                       ),
                     ],
                   ),
                 ),
-
                 const Spacer(),
-
-                // Save button
-                SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF1B1736),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
+                if (isReadOnly) ...[
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF1B1736),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
                       ),
-                    ),
-                    onPressed: _saved
-                        ? null
-                        : () {
-                            setState(() => _saved = true);
-                            final history = ref.read(mealHistoryProvider);
-                            final last =
-                                history.isEmpty ? null : history.first;
-                            final isFastDuplicate = last != null &&
-                                last.result.title == result.title &&
-                                last.result.calories == result.calories &&
-                                DateTime.now()
-                                        .difference(last.createdAt)
-                                        .inSeconds <
-                                    30;
-                            if (!isFastDuplicate) {
-                              ref.read(mealHistoryProvider.notifier).add(
-                                    MealLog(
-                                      createdAt: DateTime.now(),
-                                      result: result,
-                                    ),
-                                  );
-                            }
-                            context.go(AppRoutes.mealHistory);
-                          },
-                    child: const Text(
-                      "Save",
-                      style: TextStyle(fontWeight: FontWeight.w900),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 12),
-
-                // Edit button
-                SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: OutlinedButton(
-                    style: OutlinedButton.styleFrom(
-                      backgroundColor: Colors.white.withOpacity(0.70),
-                      side: BorderSide(color: Colors.black.withOpacity(0.10)),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                    ),
-                    onPressed: () => context.go(AppRoutes.addMeal),
-                    child: const Text(
-                      "Edit",
-                      style: TextStyle(
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF1C1C27),
+                      onPressed: () => context.go(AppRoutes.mealHistory),
+                      child: const Text(
+                        'Back to history',
+                        style: TextStyle(fontWeight: FontWeight.w900),
                       ),
                     ),
                   ),
-                ),
+                ] else ...[
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF1B1736),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      ),
+                      onPressed: _saved
+                          ? null
+                          : () async {
+                              setState(() => _saved = true);
+                              final history =
+                                  ref.read(mealHistoryProvider).valueOrNull ??
+                                  const [];
+                              final last = history.isEmpty ? null : history.first;
+                              final isFastDuplicate = last != null &&
+                                  last.result.title == result.title &&
+                                  last.result.calories == result.calories &&
+                                  DateTime.now()
+                                          .difference(last.createdAt)
+                                          .inSeconds <
+                                      30;
+                              if (!isFastDuplicate) {
+                                await ref
+                                    .read(mealHistoryProvider.notifier)
+                                    .add(result);
+                              }
+                              if (!context.mounted) return;
+                              context.go(AppRoutes.mealHistory);
+                            },
+                      child: const Text(
+                        'Save',
+                        style: TextStyle(fontWeight: FontWeight.w900),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        backgroundColor: Colors.white.withOpacity(0.70),
+                        side: BorderSide(color: Colors.black.withOpacity(0.10)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      ),
+                      onPressed: () => context.go(AppRoutes.addMeal),
+                      child: const Text(
+                        'Edit',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF1C1C27),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

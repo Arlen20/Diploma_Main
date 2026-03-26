@@ -1,19 +1,39 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/routing/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radii.dart';
 import '../../../../core/theme/app_text.dart';
+import '../../../../core/widgets/app_bottom_nav.dart';
 import '../../../../core/widgets/glass_card.dart';
 import '../../../../core/widgets/gradient_background.dart';
-import '../../../../core/widgets/app_bottom_nav.dart';
+import '../../../nutrition/domain/entities/meal_log.dart';
+import '../../../nutrition/presentation/state/meal_history_notifier.dart';
+import '../../../profile_settings/presentation/state/user_profile_provider.dart';
 
-class HomeShellPage extends StatelessWidget {
+class HomeShellPage extends ConsumerWidget {
   const HomeShellPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profile = ref.watch(userProfileProvider).valueOrNull;
+    final mealHistoryState = ref.watch(mealHistoryProvider);
+    final mealHistory = mealHistoryState.valueOrNull ?? const <MealLog>[];
+    final today = DateTime.now();
+    final todaysMeals = mealHistory.where((meal) {
+      final createdAt = meal.createdAt;
+      return createdAt.year == today.year &&
+          createdAt.month == today.month &&
+          createdAt.day == today.day;
+    }).toList(growable: false);
+    final todaysCalories = todaysMeals.fold<int>(
+      0,
+      (sum, meal) => sum + meal.result.calories,
+    );
+    final latestMeal = mealHistory.isEmpty ? null : mealHistory.first;
+
     return Scaffold(
       body: GradientBackground(
         child: SafeArea(
@@ -21,22 +41,25 @@ class HomeShellPage extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 18),
             child: Column(
               children: [
-                _TopHeader(),
+                _TopHeader(name: profile?.name ?? 'User'),
                 const SizedBox(height: 18),
-
-                // Nutrition today big card
                 _NutritionCard(
                   onAddMeal: () => context.push(AppRoutes.addMeal),
+                  todaysCalories: todaysCalories,
+                  todaysMealsCount: todaysMeals.length,
+                  latestMealTitle: latestMeal?.result.title,
+                  isLoading: mealHistoryState.isLoading,
+                ),
+                const SizedBox(height: 14),
+                _QuickActionsRow(
+                  onHistory: () => context.go(AppRoutes.mealHistory),
+                  onStats: () => context.go(AppRoutes.stats),
+                  onSettings: () => context.go(AppRoutes.settings),
                 ),
                 const SizedBox(height: 22),
-
-                // Your Schedule title row
-                _ScheduleHeader(),
+                _ScheduleHeader(goal: profile?.goal ?? 'Maintain'),
                 const SizedBox(height: 14),
-
-                //start button
                 _ScheduleTimeline(onStart: () {}),
-
                 const Spacer(),
                 const AppBottomNav(selectedIndex: 0),
               ],
@@ -49,19 +72,25 @@ class HomeShellPage extends StatelessWidget {
 }
 
 class _TopHeader extends StatelessWidget {
+  final String name;
+
+  const _TopHeader({required this.name});
+
   @override
   Widget build(BuildContext context) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Expanded(child: Text("Hi!,\nYoussef", style: AppText.titleBig)),
-        _SearchPill(),
+        Expanded(child: Text('Hi,\n$name', style: AppText.titleBig)),
+        const _SearchPill(),
       ],
     );
   }
 }
 
 class _SearchPill extends StatelessWidget {
+  const _SearchPill();
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -91,7 +120,7 @@ class _SearchPill extends StatelessWidget {
               borderRadius: BorderRadius.circular(999),
               border: Border.all(color: Colors.white.withOpacity(0.35)),
               image: const DecorationImage(
-                image: NetworkImage("https://i.pravatar.cc/100?img=12"),
+                image: NetworkImage('https://i.pravatar.cc/100?img=12'),
                 fit: BoxFit.cover,
               ),
             ),
@@ -105,7 +134,18 @@ class _SearchPill extends StatelessWidget {
 
 class _NutritionCard extends StatelessWidget {
   final VoidCallback onAddMeal;
-  const _NutritionCard({required this.onAddMeal});
+  final int todaysCalories;
+  final int todaysMealsCount;
+  final String? latestMealTitle;
+  final bool isLoading;
+
+  const _NutritionCard({
+    required this.onAddMeal,
+    required this.todaysCalories,
+    required this.todaysMealsCount,
+    required this.latestMealTitle,
+    required this.isLoading,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -117,7 +157,7 @@ class _NutritionCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            "Nutrition today",
+            'Nutrition today',
             style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.w800,
@@ -125,13 +165,72 @@ class _NutritionCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 6),
-          Text(
-            "Track calories and macros from your meal",
-            style: AppText.subtitle,
+          if (isLoading)
+            Text('Loading your meals...', style: AppText.subtitle)
+          else
+            Text(
+              todaysMealsCount == 0
+                  ? 'No meals saved yet. Start tracking today.'
+                  : '$todaysMealsCount meals today | $todaysCalories kcal total',
+              style: AppText.subtitle,
+            ),
+          const SizedBox(height: 14),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.white.withOpacity(0.10)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.14),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Icon(
+                    Icons.restaurant_menu_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        latestMealTitle ?? 'No recent meals',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        latestMealTitle == null
+                            ? 'Add your first meal to build stats'
+                            : 'Latest saved meal',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.62),
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 14),
-
-          // Figma-like white pill button
           SizedBox(
             width: double.infinity,
             height: 46,
@@ -153,7 +252,7 @@ class _NutritionCard extends StatelessWidget {
                 onTap: onAddMeal,
                 child: Center(
                   child: Text(
-                    "+  Add meal",
+                    '+ Add meal',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w800,
@@ -170,7 +269,91 @@ class _NutritionCard extends StatelessWidget {
   }
 }
 
+class _QuickActionsRow extends StatelessWidget {
+  final VoidCallback onHistory;
+  final VoidCallback onStats;
+  final VoidCallback onSettings;
+
+  const _QuickActionsRow({
+    required this.onHistory,
+    required this.onStats,
+    required this.onSettings,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: _QuickActionChip(
+            icon: Icons.history_rounded,
+            label: 'History',
+            onTap: onHistory,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _QuickActionChip(
+            icon: Icons.bar_chart_rounded,
+            label: 'Stats',
+            onTap: onStats,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _QuickActionChip(
+            icon: Icons.tune_rounded,
+            label: 'Settings',
+            onTap: onSettings,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _QuickActionChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _QuickActionChip({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassCard(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: onTap,
+        child: Column(
+          children: [
+            Icon(icon, color: Colors.white, size: 22),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.9),
+                fontWeight: FontWeight.w800,
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _ScheduleHeader extends StatelessWidget {
+  final String goal;
+
+  const _ScheduleHeader({required this.goal});
+
   @override
   Widget build(BuildContext context) {
     return Row(
@@ -179,9 +362,9 @@ class _ScheduleHeader extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text("Your\nSchedule", style: AppText.titleBig),
+              const Text('Your\nSchedule', style: AppText.titleBig),
               const SizedBox(height: 4),
-              Text("Today's Activity", style: AppText.labelMuted),
+              Text('$goal plan', style: AppText.labelMuted),
             ],
           ),
         ),
@@ -202,6 +385,7 @@ class _ScheduleHeader extends StatelessWidget {
 
 class _ScheduleTimeline extends StatelessWidget {
   final VoidCallback onStart;
+
   const _ScheduleTimeline({required this.onStart});
 
   @override
@@ -211,7 +395,6 @@ class _ScheduleTimeline extends StatelessWidget {
         Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // left dot
             Container(
               width: 14,
               height: 14,
@@ -221,10 +404,9 @@ class _ScheduleTimeline extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 12),
-
             const Expanded(
               child: Text(
-                "WarmUp",
+                'WarmUp',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
@@ -232,8 +414,6 @@ class _ScheduleTimeline extends StatelessWidget {
                 ),
               ),
             ),
-
-            // Start pill button (yellow)
             InkWell(
               borderRadius: BorderRadius.circular(999),
               onTap: onStart,
@@ -247,7 +427,7 @@ class _ScheduleTimeline extends StatelessWidget {
                 child: const Row(
                   children: [
                     Text(
-                      "Start",
+                      'Start',
                       style: TextStyle(
                         fontWeight: FontWeight.w900,
                         color: AppColors.primaryBtnText,
@@ -265,10 +445,7 @@ class _ScheduleTimeline extends StatelessWidget {
             ),
           ],
         ),
-
         const SizedBox(height: 12),
-
-        // subtle timeline dots
         Padding(
           padding: const EdgeInsets.only(left: 7),
           child: Column(
@@ -289,16 +466,13 @@ class _ScheduleTimeline extends StatelessWidget {
             ],
           ),
         ),
-
         const SizedBox(height: 8),
-
-        // next item preview
         Align(
           alignment: Alignment.centerLeft,
           child: Padding(
             padding: const EdgeInsets.only(left: 26),
             child: Text(
-              "Muscle Up\n10 reps, 3 sets with 20 sec rest",
+              'Muscle Up\n10 reps, 3 sets with 20 sec rest',
               style: TextStyle(
                 color: Colors.white.withOpacity(0.28),
                 fontSize: 12,

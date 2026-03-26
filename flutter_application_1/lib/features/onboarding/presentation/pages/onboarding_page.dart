@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_application_1/core/routing/app_router.dart';
+import 'package:go_router/go_router.dart';
 
-class OnboardingPage extends ConsumerWidget {
+import '../../../../core/routing/app_routes.dart';
+
+class OnboardingPage extends StatelessWidget {
   const OnboardingPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Onboarding')),
       body: Center(
         child: ElevatedButton(
-          onPressed: () =>
-              ref.read(appSessionProvider.notifier).completeOnboarding(),
-          child: const Text('Finish onboarding (dummy)'),
+          onPressed: () => context.go(AppRoutes.onboardingGoal),
+          child: const Text('Continue onboarding'),
         ),
       ),
     );

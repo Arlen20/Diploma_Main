@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/routing/app_routes.dart';
 import '../../../../core/widgets/app_bottom_nav.dart';
 import '../../../../core/widgets/glass_card.dart';
-import '../../../../core/routing/app_routes.dart';
+import '../../domain/entities/meal_log.dart';
+import '../../domain/entities/meal_result.dart';
 import '../state/meal_history_notifier.dart';
 
 class MealHistoryPage extends ConsumerWidget {
@@ -12,7 +14,8 @@ class MealHistoryPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final history = ref.watch(mealHistoryProvider);
+    final historyState = ref.watch(mealHistoryProvider);
+    final history = historyState.valueOrNull ?? const <MealLog>[];
 
     const bottomNavSpace = 120.0;
     const bottomNavInset = 18.0;
@@ -32,8 +35,27 @@ class MealHistoryPage extends ConsumerWidget {
       ),
       body: Stack(
         children: [
-          // -------- CONTENT --------
-          history.isEmpty
+          historyState.isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : historyState.hasError
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: bottomNavSpace),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text('Failed to load meals'),
+                        const SizedBox(height: 12),
+                        ElevatedButton(
+                          onPressed: () =>
+                              ref.read(mealHistoryProvider.notifier).load(),
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              : history.isEmpty
               ? Center(
                   child: Padding(
                     padding: const EdgeInsets.only(bottom: bottomNavSpace),
@@ -61,13 +83,13 @@ class MealHistoryPage extends ConsumerWidget {
                   separatorBuilder: (_, __) => const SizedBox(height: 12),
                   itemBuilder: (context, i) {
                     final item = history[i];
-                    final r = item.result;
+                    final result = item.result;
 
                     return Dismissible(
-                      key: ValueKey(item.createdAt.toIso8601String()),
+                      key: ValueKey(item.id),
                       direction: DismissDirection.endToStart,
                       onDismissed: (_) {
-                        ref.read(mealHistoryProvider.notifier).removeAt(i);
+                        ref.read(mealHistoryProvider.notifier).remove(item.id);
                       },
                       background: Container(
                         alignment: Alignment.centerRight,
@@ -77,8 +99,13 @@ class MealHistoryPage extends ConsumerWidget {
                       ),
                       child: GestureDetector(
                         onTap: () {
-                          // Open the result screen again (read-only view)
-                          context.go(AppRoutes.mealResult, extra: r);
+                          context.go(
+                            AppRoutes.mealResult,
+                            extra: <String, dynamic>{
+                              'result': result,
+                              'readOnly': true,
+                            },
+                          );
                         },
                         child: GlassCard(
                           padding: const EdgeInsets.all(12),
@@ -99,7 +126,7 @@ class MealHistoryPage extends ConsumerWidget {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      r.title,
+                                      result.title,
                                       style: const TextStyle(
                                         fontWeight: FontWeight.w800,
                                         fontSize: 14,
@@ -107,7 +134,7 @@ class MealHistoryPage extends ConsumerWidget {
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      '${r.calories} kcal • P ${r.protein}g • C ${r.carbs}g • F ${r.fat}g',
+                                      _macroLine(result),
                                       style: TextStyle(
                                         color: Colors.black.withOpacity(0.60),
                                         fontWeight: FontWeight.w700,
@@ -133,18 +160,12 @@ class MealHistoryPage extends ConsumerWidget {
                     );
                   },
                 ),
-
-          // -------- FLOATING NAV --------
           const Positioned(
             left: bottomNavInset,
             right: bottomNavInset,
             bottom: bottomNavInset,
-            child: AppBottomNav(
-              selectedIndex: 0,
-            ), // history belongs to Nutrition/Home tab
+            child: AppBottomNav(selectedIndex: 0),
           ),
-
-          // -------- ADD BUTTON (ABOVE NAV) --------
           if (history.isNotEmpty)
             Positioned(
               right: 24,
@@ -159,4 +180,8 @@ class MealHistoryPage extends ConsumerWidget {
       ),
     );
   }
+}
+
+String _macroLine(MealResult result) {
+  return '${result.calories} kcal | P ${result.protein}g | C ${result.carbs}g | F ${result.fat}g';
 }

@@ -1,21 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/routing/app_routes.dart';
-import '../../../../core/widgets/gradient_background.dart';
 import '../../../../core/widgets/glass_card.dart';
+import '../../../../core/widgets/gradient_background.dart';
+import '../../../profile_settings/presentation/state/user_profile_provider.dart';
 
-class OnboardingMetricsPage extends StatefulWidget {
+class OnboardingMetricsPage extends ConsumerStatefulWidget {
   const OnboardingMetricsPage({super.key});
 
   @override
-  State<OnboardingMetricsPage> createState() => _OnboardingMetricsPageState();
+  ConsumerState<OnboardingMetricsPage> createState() =>
+      _OnboardingMetricsPageState();
 }
 
-class _OnboardingMetricsPageState extends State<OnboardingMetricsPage> {
-  final _height = TextEditingController(text: "175");
-  final _weight = TextEditingController(text: "70");
-  final _age = TextEditingController(text: "20");
+class _OnboardingMetricsPageState extends ConsumerState<OnboardingMetricsPage> {
+  final _height = TextEditingController();
+  final _weight = TextEditingController();
+  final _age = TextEditingController();
+  bool _initialized = false;
 
   @override
   void dispose() {
@@ -27,6 +31,19 @@ class _OnboardingMetricsPageState extends State<OnboardingMetricsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final extra = GoRouterState.of(context).extra;
+    final payload = extra is Map<String, dynamic>
+        ? Map<String, dynamic>.from(extra)
+        : <String, dynamic>{};
+    final profile = ref.watch(userProfileProvider).valueOrNull;
+
+    if (!_initialized && profile != null) {
+      _height.text = profile.heightCm.toString();
+      _weight.text = profile.weightKg.toString();
+      _age.text = profile.age.toString();
+      _initialized = true;
+    }
+
     return Scaffold(
       body: GradientBackground(
         child: SafeArea(
@@ -38,11 +55,13 @@ class _OnboardingMetricsPageState extends State<OnboardingMetricsPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 6),
-
                     Row(
                       children: [
                         IconButton(
-                          onPressed: () => context.go(AppRoutes.onboardingGoal),
+                          onPressed: () => context.go(
+                            AppRoutes.onboardingGoal,
+                            extra: payload,
+                          ),
                           icon: const Icon(
                             Icons.arrow_back,
                             color: Colors.white,
@@ -51,7 +70,7 @@ class _OnboardingMetricsPageState extends State<OnboardingMetricsPage> {
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          "Step 2 of 3",
+                          'Step 2 of 3',
                           style: TextStyle(
                             color: Colors.white.withOpacity(0.65),
                             fontWeight: FontWeight.w800,
@@ -59,11 +78,9 @@ class _OnboardingMetricsPageState extends State<OnboardingMetricsPage> {
                         ),
                       ],
                     ),
-
                     const SizedBox(height: 8),
-
                     const Text(
-                      "Your\nmetrics",
+                      'Your\nmetrics',
                       style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w900,
@@ -73,70 +90,68 @@ class _OnboardingMetricsPageState extends State<OnboardingMetricsPage> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      "We use this to estimate calories and macros.",
+                      'We use this to estimate calories and macros.',
                       style: TextStyle(
                         color: Colors.white.withOpacity(0.65),
                         fontWeight: FontWeight.w700,
                         fontSize: 13,
                       ),
                     ),
-
                     const SizedBox(height: 18),
-
                     GlassCard(
                       padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
                       child: Column(
                         children: [
                           _MetricField(
-                            label: "Height",
-                            unit: "cm",
+                            label: 'Height',
+                            unit: 'cm',
                             controller: _height,
                             icon: Icons.height_rounded,
                           ),
                           const SizedBox(height: 12),
                           _MetricField(
-                            label: "Weight",
-                            unit: "kg",
+                            label: 'Weight',
+                            unit: 'kg',
                             controller: _weight,
                             icon: Icons.monitor_weight_rounded,
                           ),
                           const SizedBox(height: 12),
                           _MetricField(
-                            label: "Age",
-                            unit: "years",
+                            label: 'Age',
+                            unit: 'years',
                             controller: _age,
                             icon: Icons.cake_rounded,
                           ),
                         ],
                       ),
                     ),
-
                     const Spacer(),
-
                     Row(
-                      children: [
+                      children: const [
                         _Dot(active: false),
-                        const SizedBox(width: 6),
+                        SizedBox(width: 6),
                         _Dot(active: true),
-                        const SizedBox(width: 6),
+                        SizedBox(width: 6),
                         _Dot(active: false),
                       ],
                     ),
                   ],
                 ),
               ),
-
               Positioned(
                 left: 18,
                 right: 18,
                 bottom: 18,
                 child: GlassCard(
-                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+                  padding: const EdgeInsets.all(12),
                   child: Row(
                     children: [
                       Expanded(
                         child: OutlinedButton(
-                          onPressed: () => context.go(AppRoutes.onboardingGoal),
+                          onPressed: () => context.go(
+                            AppRoutes.onboardingGoal,
+                            extra: payload,
+                          ),
                           style: OutlinedButton.styleFrom(
                             side: BorderSide(
                               color: Colors.white.withOpacity(0.22),
@@ -148,7 +163,7 @@ class _OnboardingMetricsPageState extends State<OnboardingMetricsPage> {
                             padding: const EdgeInsets.symmetric(vertical: 14),
                           ),
                           child: Text(
-                            "Back",
+                            'Back',
                             style: TextStyle(
                               fontWeight: FontWeight.w900,
                               color: Colors.white.withOpacity(0.85),
@@ -160,9 +175,36 @@ class _OnboardingMetricsPageState extends State<OnboardingMetricsPage> {
                       Expanded(
                         child: ElevatedButton(
                           onPressed: () {
-                            // optional validation:
-                            // if any field empty -> show snackbar
-                            context.go(AppRoutes.onboardingFinish);
+                            final height = int.tryParse(_height.text.trim());
+                            final weight = int.tryParse(_weight.text.trim());
+                            final age = int.tryParse(_age.text.trim());
+
+                            if (height == null ||
+                                weight == null ||
+                                age == null ||
+                                height <= 0 ||
+                                weight <= 0 ||
+                                age <= 0) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Enter valid height, weight, and age.',
+                                  ),
+                                ),
+                              );
+                              return;
+                            }
+
+                            final nextPayload = <String, dynamic>{
+                              ...payload,
+                              'height': height,
+                              'weight': weight,
+                              'age': age,
+                            };
+                            context.go(
+                              AppRoutes.onboardingFinish,
+                              extra: nextPayload,
+                            );
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.white,
@@ -173,7 +215,7 @@ class _OnboardingMetricsPageState extends State<OnboardingMetricsPage> {
                             elevation: 0,
                           ),
                           child: const Text(
-                            "Continue",
+                            'Continue',
                             style: TextStyle(
                               fontWeight: FontWeight.w900,
                               color: Color(0xFF1C1C27),
@@ -270,6 +312,7 @@ class _MetricField extends StatelessWidget {
 
 class _Dot extends StatelessWidget {
   final bool active;
+
   const _Dot({required this.active});
 
   @override

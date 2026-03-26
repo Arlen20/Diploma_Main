@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/widgets/gradient_background.dart';
-import '../../../../core/widgets/glass_card.dart';
-import '../../../../core/widgets/app_bottom_nav.dart';
-import '../../../../core/theme/app_text.dart';
 import '../../../../core/theme/app_colors.dart';
-
+import '../../../../core/theme/app_text.dart';
+import '../../../../core/widgets/app_bottom_nav.dart';
+import '../../../../core/widgets/glass_card.dart';
+import '../../../../core/widgets/gradient_background.dart';
+import '../../../nutrition/domain/entities/meal_log.dart';
 import '../../../nutrition/presentation/state/meal_history_notifier.dart';
 
 class StatsPage extends ConsumerWidget {
@@ -14,35 +14,23 @@ class StatsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final history = ref.watch(mealHistoryProvider);
+    final historyState = ref.watch(mealHistoryProvider);
+    final history = historyState.valueOrNull ?? const <MealLog>[];
 
-    // ---- compute simple stats ----
     final mealsCount = history.length;
-
-    final totalCalories = history.fold<int>(
-      0,
-      (sum, e) => sum + e.result.calories,
-    );
-    final totalProtein = history.fold<int>(
-      0,
-      (sum, e) => sum + e.result.protein,
-    );
+    final totalCalories = history.fold<int>(0, (sum, e) => sum + e.result.calories);
+    final totalProtein = history.fold<int>(0, (sum, e) => sum + e.result.protein);
     final totalCarbs = history.fold<int>(0, (sum, e) => sum + e.result.carbs);
     final totalFat = history.fold<int>(0, (sum, e) => sum + e.result.fat);
+    final avgCalories = mealsCount == 0 ? 0 : (totalCalories / mealsCount).round();
 
-    final avgCalories = mealsCount == 0
-        ? 0
-        : (totalCalories / mealsCount).round();
-
-    const bottomNavSpace =
-        120.0; // IMPORTANT: space so scroll content isn't hidden
+    const bottomNavSpace = 120.0;
 
     return Scaffold(
       body: GradientBackground(
         child: SafeArea(
           child: Stack(
             children: [
-              // -------- SCROLLABLE CONTENT --------
               SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(
                   parent: BouncingScrollPhysics(),
@@ -51,42 +39,37 @@ class StatsPage extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text("Your\nStats", style: AppText.titleBig),
+                    const Text('Your\nStats', style: AppText.titleBig),
                     const SizedBox(height: 6),
-                    Text("Based on saved meals", style: AppText.subtitle),
+                    Text('Based on saved meals', style: AppText.subtitle),
                     const SizedBox(height: 18),
-
-                    // Summary cards row
                     Row(
                       children: [
                         Expanded(
                           child: _StatCard(
-                            title: "Meals",
-                            value: "$mealsCount",
-                            subtitle: "saved",
+                            title: 'Meals',
+                            value: '$mealsCount',
+                            subtitle: 'saved',
                           ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: _StatCard(
-                            title: "Avg kcal",
-                            value: "$avgCalories",
-                            subtitle: "per meal",
+                            title: 'Avg kcal',
+                            value: '$avgCalories',
+                            subtitle: 'per meal',
                           ),
                         ),
                       ],
                     ),
-
                     const SizedBox(height: 14),
-
-                    // Big macros card
                     GlassCard(
-                      padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+                      padding: const EdgeInsets.all(18),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
-                            "Macros total",
+                            'Macros total',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w900,
@@ -94,34 +77,30 @@ class StatsPage extends ConsumerWidget {
                             ),
                           ),
                           const SizedBox(height: 10),
-
                           _MacroRow(
-                            label: "Calories",
-                            value: "$totalCalories",
-                            unit: "kcal",
+                            label: 'Calories',
+                            value: '$totalCalories',
+                            unit: 'kcal',
                           ),
                           const SizedBox(height: 8),
                           _MacroRow(
-                            label: "Protein",
-                            value: "$totalProtein",
-                            unit: "g",
+                            label: 'Protein',
+                            value: '$totalProtein',
+                            unit: 'g',
                           ),
                           const SizedBox(height: 8),
                           _MacroRow(
-                            label: "Carbs",
-                            value: "$totalCarbs",
-                            unit: "g",
+                            label: 'Carbs',
+                            value: '$totalCarbs',
+                            unit: 'g',
                           ),
                           const SizedBox(height: 8),
                           _MacroRow(
-                            label: "Fat",
-                            value: "$totalFat",
-                            unit: "g",
+                            label: 'Fat',
+                            value: '$totalFat',
+                            unit: 'g',
                           ),
-
                           const SizedBox(height: 12),
-
-                          // Clear for demo/testing
                           if (history.isNotEmpty)
                             Align(
                               alignment: Alignment.centerRight,
@@ -130,7 +109,7 @@ class StatsPage extends ConsumerWidget {
                                     .read(mealHistoryProvider.notifier)
                                     .clear(),
                                 child: Text(
-                                  "Clear",
+                                  'Clear',
                                   style: TextStyle(
                                     color: Colors.white.withOpacity(0.75),
                                     fontWeight: FontWeight.w800,
@@ -141,11 +120,9 @@ class StatsPage extends ConsumerWidget {
                         ],
                       ),
                     ),
-
                     const SizedBox(height: 14),
-
                     Text(
-                      "Recent meals",
+                      'Recent meals',
                       style: TextStyle(
                         color: Colors.white.withOpacity(0.85),
                         fontWeight: FontWeight.w900,
@@ -153,13 +130,31 @@ class StatsPage extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(height: 10),
-
-                    if (history.isEmpty)
+                    if (historyState.isLoading)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 30),
+                        child: Center(child: CircularProgressIndicator()),
+                      )
+                    else if (historyState.hasError)
                       Padding(
                         padding: const EdgeInsets.only(top: 30),
                         child: Center(
                           child: Text(
-                            "No meals yet.\nSave a meal result to see stats.",
+                            'Failed to load meal stats.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.55),
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      )
+                    else if (history.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 30),
+                        child: Center(
+                          child: Text(
+                            'No meals yet.\nSave a meal result to see stats.',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               color: Colors.white.withOpacity(0.55),
@@ -170,11 +165,9 @@ class StatsPage extends ConsumerWidget {
                       )
                     else
                       Column(
-                        children: List.generate(history.length.clamp(0, 8), (
-                          i,
-                        ) {
+                        children: List.generate(history.length.clamp(0, 8), (i) {
                           final item = history[i];
-                          final r = item.result;
+                          final result = item.result;
 
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 10),
@@ -187,11 +180,10 @@ class StatsPage extends ConsumerWidget {
                                 children: [
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
+                                      crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          r.title,
+                                          result.title,
                                           style: const TextStyle(
                                             color: Colors.white,
                                             fontWeight: FontWeight.w900,
@@ -200,11 +192,9 @@ class StatsPage extends ConsumerWidget {
                                         ),
                                         const SizedBox(height: 4),
                                         Text(
-                                          "${r.calories} kcal • P ${r.protein}g • C ${r.carbs}g • F ${r.fat}g",
+                                          '${result.calories} kcal | P ${result.protein}g | C ${result.carbs}g | F ${result.fat}g',
                                           style: TextStyle(
-                                            color: Colors.white.withOpacity(
-                                              0.65,
-                                            ),
+                                            color: Colors.white.withOpacity(0.65),
                                             fontWeight: FontWeight.w700,
                                             fontSize: 11,
                                           ),
@@ -214,7 +204,7 @@ class StatsPage extends ConsumerWidget {
                                   ),
                                   const SizedBox(width: 10),
                                   Text(
-                                    "${item.createdAt.hour.toString().padLeft(2, '0')}:${item.createdAt.minute.toString().padLeft(2, '0')}",
+                                    '${item.createdAt.hour.toString().padLeft(2, '0')}:${item.createdAt.minute.toString().padLeft(2, '0')}',
                                     style: TextStyle(
                                       color: Colors.white.withOpacity(0.55),
                                       fontWeight: FontWeight.w800,
@@ -230,13 +220,11 @@ class StatsPage extends ConsumerWidget {
                   ],
                 ),
               ),
-
-              // -------- FIXED BOTTOM NAV (like schedule) --------
               const Positioned(
                 left: 18,
                 right: 18,
                 bottom: 18,
-                child: AppBottomNav(selectedIndex: 2), // 2 = Stats
+                child: AppBottomNav(selectedIndex: 2),
               ),
             ],
           ),
@@ -260,7 +248,7 @@ class _StatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GlassCard(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -323,7 +311,7 @@ class _MacroRow extends StatelessWidget {
           ),
         ),
         Text(
-          "$value $unit",
+          '$value $unit',
           style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.w900,

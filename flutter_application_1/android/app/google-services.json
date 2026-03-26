@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "206676098403",
+    "project_id": "diploma-fitness-app",
+    "storage_bucket": "diploma-fitness-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:206676098403:android:df4f8ab739d37bde1ba756",
+        "android_client_info": {
+          "package_name": "build.gradle.kts"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBS9oG3sjosk6lL0NbXCW-U_yN1AHGPdPQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:206676098403:android:5565103ee58f91991ba756",
+        "android_client_info": {
+          "package_name": "com.example.flutter_application_1"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBS9oG3sjosk6lL0NbXCW-U_yN1AHGPdPQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

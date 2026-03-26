@@ -2,7 +2,9 @@ class AppRoutes {
   static const splash = '/';
   static const login = '/login';
   static const register = '/register';
+  static const forgotPassword = '/forgot-password';
   static const checkInbox = '/check-inbox';
+  static const verificationSuccess = '/verification-success';
 
   static const onboarding = '/onboarding';
 
@@ -14,6 +16,7 @@ class AppRoutes {
   static const schedule = '/schedule';
   static const stats = '/stats';
   static const settings = '/settings';
+  static const trainingSuccess = '/training-success';
   static const onboardingGoal = '/onboarding/goal';
   static const onboardingMetrics = '/onboarding/metrics';
   static const onboardingFinish = '/onboarding/finish';
