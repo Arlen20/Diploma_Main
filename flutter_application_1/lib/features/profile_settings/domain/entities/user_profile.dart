@@ -3,6 +3,9 @@ class UserProfile {
   final String email;
   final String name;
   final String goal;
+  final String sex;
+  final String activityLevel;
+  final int preferredTrainingDays;
   final int heightCm;
   final int weightKg;
   final int age;
@@ -13,6 +16,9 @@ class UserProfile {
     required this.email,
     required this.name,
     required this.goal,
+    required this.sex,
+    required this.activityLevel,
+    required this.preferredTrainingDays,
     required this.heightCm,
     required this.weightKg,
     required this.age,
@@ -24,6 +30,9 @@ class UserProfile {
     email: '',
     name: 'User',
     goal: 'Maintain',
+    sex: 'Male',
+    activityLevel: 'Moderate',
+    preferredTrainingDays: 4,
     heightCm: 175,
     weightKg: 70,
     age: 20,
@@ -35,6 +44,9 @@ class UserProfile {
     String? email,
     String? name,
     String? goal,
+    String? sex,
+    String? activityLevel,
+    int? preferredTrainingDays,
     int? heightCm,
     int? weightKg,
     int? age,
@@ -45,6 +57,10 @@ class UserProfile {
       email: email ?? this.email,
       name: name ?? this.name,
       goal: goal ?? this.goal,
+      sex: sex ?? this.sex,
+      activityLevel: activityLevel ?? this.activityLevel,
+      preferredTrainingDays:
+          preferredTrainingDays ?? this.preferredTrainingDays,
       heightCm: heightCm ?? this.heightCm,
       weightKg: weightKg ?? this.weightKg,
       age: age ?? this.age,
@@ -57,6 +73,9 @@ class UserProfile {
         'email': email,
         'name': name,
         'goal': goal,
+        'sex': sex,
+        'activityLevel': activityLevel,
+        'preferredTrainingDays': preferredTrainingDays,
         'heightCm': heightCm,
         'weightKg': weightKg,
         'age': age,
@@ -69,6 +88,10 @@ class UserProfile {
       email: json['email'] as String? ?? empty.email,
       name: json['name'] as String? ?? empty.name,
       goal: json['goal'] as String? ?? empty.goal,
+      sex: json['sex'] as String? ?? empty.sex,
+      activityLevel: json['activityLevel'] as String? ?? empty.activityLevel,
+      preferredTrainingDays:
+          json['preferredTrainingDays'] as int? ?? empty.preferredTrainingDays,
       heightCm: json['heightCm'] as int? ?? empty.heightCm,
       weightKg: json['weightKg'] as int? ?? empty.weightKg,
       age: json['age'] as int? ?? empty.age,

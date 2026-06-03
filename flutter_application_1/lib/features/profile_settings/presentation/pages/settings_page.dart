@@ -22,6 +22,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   final _weightController = TextEditingController();
   final _ageController = TextEditingController();
   String _goal = UserProfile.empty.goal;
+  String _sex = UserProfile.empty.sex;
+  String _activityLevel = UserProfile.empty.activityLevel;
+  int _preferredTrainingDays = UserProfile.empty.preferredTrainingDays;
   bool _isSaving = false;
   bool _isSendingReset = false;
   bool _isSendingVerification = false;
@@ -52,6 +55,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     _weightController.text = profile.weightKg.toString();
     _ageController.text = profile.age.toString();
     _goal = profile.goal;
+    _sex = profile.sex;
+    _activityLevel = profile.activityLevel;
+    _preferredTrainingDays = profile.preferredTrainingDays;
   }
 
   Future<void> _save(UserProfile currentProfile) async {
@@ -73,6 +79,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             currentProfile.copyWith(
               name: name,
               goal: _goal,
+              sex: _sex,
+              activityLevel: _activityLevel,
+              preferredTrainingDays: _preferredTrainingDays,
               heightCm: height,
               weightKg: weight,
               age: age,
@@ -220,17 +229,123 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                                     showCheckmark: true,
                                     checkmarkColor: const Color(0xFF1C1C27),
                                     selectedColor: const Color(0xFFF3F0B6),
-                                    backgroundColor: Colors.white.withOpacity(0.10),
+                                    backgroundColor: const Color(0xFF514874),
                                     side: BorderSide(
                                       color: _goal == goal
                                           ? const Color(0xFFF3F0B6)
-                                          : Colors.white.withOpacity(0.16),
+                                          : Colors.white.withOpacity(0.22),
                                     ),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(14),
                                     ),
                                     labelStyle: TextStyle(
                                       color: _goal == goal
+                                          ? const Color(0xFF1C1C27)
+                                          : Colors.white,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                )
+                                .toList(growable: false),
+                          ),
+                          const SizedBox(height: 12),
+                          _InputLabel(label: 'Sex'),
+                          const SizedBox(height: 6),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: ['Male', 'Female', 'Other']
+                                .map(
+                                  (item) => ChoiceChip(
+                                    label: Text(item),
+                                    selected: _sex == item,
+                                    onSelected: (_) => setState(() => _sex = item),
+                                    showCheckmark: true,
+                                    checkmarkColor: const Color(0xFF1C1C27),
+                                    selectedColor: const Color(0xFFF3F0B6),
+                                    backgroundColor: const Color(0xFF514874),
+                                    side: BorderSide(
+                                      color: _sex == item
+                                          ? const Color(0xFFF3F0B6)
+                                          : Colors.white.withOpacity(0.22),
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    labelStyle: TextStyle(
+                                      color: _sex == item
+                                          ? const Color(0xFF1C1C27)
+                                          : Colors.white,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                )
+                                .toList(growable: false),
+                          ),
+                          const SizedBox(height: 12),
+                          _InputLabel(label: 'Activity level'),
+                          const SizedBox(height: 6),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: ['Low', 'Moderate', 'High']
+                                .map(
+                                  (item) => ChoiceChip(
+                                    label: Text(item),
+                                    selected: _activityLevel == item,
+                                    onSelected: (_) => setState(
+                                      () => _activityLevel = item,
+                                    ),
+                                    showCheckmark: true,
+                                    checkmarkColor: const Color(0xFF1C1C27),
+                                    selectedColor: const Color(0xFFF3F0B6),
+                                    backgroundColor: const Color(0xFF514874),
+                                    side: BorderSide(
+                                      color: _activityLevel == item
+                                          ? const Color(0xFFF3F0B6)
+                                          : Colors.white.withOpacity(0.22),
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    labelStyle: TextStyle(
+                                      color: _activityLevel == item
+                                          ? const Color(0xFF1C1C27)
+                                          : Colors.white,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                )
+                                .toList(growable: false),
+                          ),
+                          const SizedBox(height: 12),
+                          _InputLabel(label: 'Training days per week'),
+                          const SizedBox(height: 6),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: List.generate(5, (index) => index + 2)
+                                .map(
+                                  (days) => ChoiceChip(
+                                    label: Text('$days days'),
+                                    selected: _preferredTrainingDays == days,
+                                    onSelected: (_) => setState(
+                                      () => _preferredTrainingDays = days,
+                                    ),
+                                    showCheckmark: true,
+                                    checkmarkColor: const Color(0xFF1C1C27),
+                                    selectedColor: const Color(0xFFF3F0B6),
+                                    backgroundColor: const Color(0xFF514874),
+                                    side: BorderSide(
+                                      color: _preferredTrainingDays == days
+                                          ? const Color(0xFFF3F0B6)
+                                          : Colors.white.withOpacity(0.22),
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    labelStyle: TextStyle(
+                                      color: _preferredTrainingDays == days
                                           ? const Color(0xFF1C1C27)
                                           : Colors.white,
                                       fontWeight: FontWeight.w700,

@@ -21,6 +21,15 @@ class OnboardingFinishPage extends ConsumerWidget {
         ref.watch(userProfileProvider).valueOrNull ?? UserProfile.empty;
 
     final goal = _asString(map['goal'], fallback: currentProfile.goal);
+    final sex = _asString(map['sex'], fallback: currentProfile.sex);
+    final activityLevel = _asString(
+      map['activityLevel'],
+      fallback: currentProfile.activityLevel,
+    );
+    final preferredTrainingDays = _asNum(
+      map['preferredTrainingDays'],
+      fallback: currentProfile.preferredTrainingDays,
+    ).round();
     final weightNum = _asNum(map['weight'], fallback: currentProfile.weightKg);
     final heightNum = _asNum(map['height'], fallback: currentProfile.heightCm);
     final ageNum = _asNum(map['age'], fallback: currentProfile.age);
@@ -30,6 +39,9 @@ class OnboardingFinishPage extends ConsumerWidget {
     final age = ageNum.toStringAsFixed(0);
     final profileToSave = currentProfile.copyWith(
       goal: goal,
+      sex: sex,
+      activityLevel: activityLevel,
+      preferredTrainingDays: preferredTrainingDays,
       weightKg: weightNum.round(),
       heightCm: heightNum.round(),
       age: ageNum.round(),
@@ -88,6 +100,18 @@ class OnboardingFinishPage extends ConsumerWidget {
                           ),
                           const SizedBox(height: 12),
                           _RowItem(label: 'Goal', value: goal),
+                          const SizedBox(height: 10),
+                          _RowItem(label: 'Sex', value: sex),
+                          const SizedBox(height: 10),
+                          _RowItem(
+                            label: 'Activity',
+                            value: activityLevel,
+                          ),
+                          const SizedBox(height: 10),
+                          _RowItem(
+                            label: 'Training days',
+                            value: '$preferredTrainingDays / week',
+                          ),
                           const SizedBox(height: 10),
                           _RowItem(label: 'Weight', value: '$weight kg'),
                           const SizedBox(height: 10),
