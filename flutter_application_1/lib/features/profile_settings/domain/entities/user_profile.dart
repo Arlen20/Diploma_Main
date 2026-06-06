@@ -10,6 +10,7 @@ class UserProfile {
   final int weightKg;
   final int age;
   final bool onboardingCompleted;
+  final String avatarLocalPath;
 
   const UserProfile({
     required this.uid,
@@ -23,6 +24,7 @@ class UserProfile {
     required this.weightKg,
     required this.age,
     required this.onboardingCompleted,
+    required this.avatarLocalPath,
   });
 
   static const empty = UserProfile(
@@ -37,6 +39,7 @@ class UserProfile {
     weightKg: 70,
     age: 20,
     onboardingCompleted: false,
+    avatarLocalPath: '',
   );
 
   UserProfile copyWith({
@@ -51,6 +54,7 @@ class UserProfile {
     int? weightKg,
     int? age,
     bool? onboardingCompleted,
+    String? avatarLocalPath,
   }) {
     return UserProfile(
       uid: uid ?? this.uid,
@@ -65,22 +69,24 @@ class UserProfile {
       weightKg: weightKg ?? this.weightKg,
       age: age ?? this.age,
       onboardingCompleted: onboardingCompleted ?? this.onboardingCompleted,
+      avatarLocalPath: avatarLocalPath ?? this.avatarLocalPath,
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'uid': uid,
-        'email': email,
-        'name': name,
-        'goal': goal,
-        'sex': sex,
-        'activityLevel': activityLevel,
-        'preferredTrainingDays': preferredTrainingDays,
-        'heightCm': heightCm,
-        'weightKg': weightKg,
-        'age': age,
-        'onboardingCompleted': onboardingCompleted,
-      };
+    'uid': uid,
+    'email': email,
+    'name': name,
+    'goal': goal,
+    'sex': sex,
+    'activityLevel': activityLevel,
+    'preferredTrainingDays': preferredTrainingDays,
+    'heightCm': heightCm,
+    'weightKg': weightKg,
+    'age': age,
+    'onboardingCompleted': onboardingCompleted,
+    'avatarLocalPath': avatarLocalPath,
+  };
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
     return UserProfile(
@@ -97,6 +103,8 @@ class UserProfile {
       age: json['age'] as int? ?? empty.age,
       onboardingCompleted:
           json['onboardingCompleted'] as bool? ?? empty.onboardingCompleted,
+      avatarLocalPath:
+          json['avatarLocalPath'] as String? ?? empty.avatarLocalPath,
     );
   }
 }

@@ -20,6 +20,8 @@ import 'package:flutter_application_1/features/onboarding/presentation/pages/onb
 import 'package:flutter_application_1/features/onboarding/presentation/pages/onboarding_goal_page.dart';
 import 'package:flutter_application_1/features/onboarding/presentation/pages/onboarding_metrics_page.dart';
 import 'package:flutter_application_1/features/onboarding/presentation/pages/onboarding_page.dart';
+import 'package:flutter_application_1/features/plan/domain/entities/workout_plan_entry.dart';
+import 'package:flutter_application_1/features/plan/presentation/pages/training_session_page.dart';
 import 'package:flutter_application_1/features/plan/presentation/pages/weekly_plan_page.dart';
 import 'package:flutter_application_1/features/profile_settings/presentation/pages/settings_page.dart';
 import 'package:flutter_application_1/features/profile_settings/presentation/state/user_profile_provider.dart';
@@ -97,6 +99,16 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.schedule,
         builder: (context, state) => const WeeklyPlanPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.trainingSession,
+        builder: (context, state) {
+          final entry = state.extra;
+          if (entry is! WorkoutPlanEntry) {
+            return const WeeklyPlanPage();
+          }
+          return TrainingSessionPage(planEntry: entry);
+        },
       ),
       GoRoute(
         path: AppRoutes.trainingSuccess,

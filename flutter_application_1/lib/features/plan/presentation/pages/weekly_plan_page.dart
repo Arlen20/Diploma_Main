@@ -50,9 +50,9 @@ class _WeeklyPlanPageState extends ConsumerState<WeeklyPlanPage> {
   Future<void> _generatePlan() async {
     final profile = ref.read(userProfileProvider).valueOrNull;
     if (profile == null || profile.uid.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Load your profile first.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Load your profile first.')));
       return;
     }
 
@@ -212,7 +212,9 @@ class _WeeklyPlanPageState extends ConsumerState<WeeklyPlanPage> {
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.white,
                                 foregroundColor: const Color(0xFF24134D),
-                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
                               ),
                               child: _isGenerating
                                   ? const SizedBox(
@@ -248,7 +250,9 @@ class _WeeklyPlanPageState extends ConsumerState<WeeklyPlanPage> {
                     Expanded(
                       child: planState.isLoading
                           ? const Center(
-                              child: CircularProgressIndicator(color: Colors.white),
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                              ),
                             )
                           : planState.hasError
                           ? _PlanErrorState(
@@ -265,15 +269,10 @@ class _WeeklyPlanPageState extends ConsumerState<WeeklyPlanPage> {
                                 final item = selectedPlans[index];
                                 return _WorkoutCard(
                                   item: item,
-                                  onTap: () async {
-                                    if (!item.completed) {
-                                      await ref
-                                          .read(workoutPlanProvider.notifier)
-                                          .toggleCompleted(item);
-                                    }
-                                    if (!mounted) return;
-                                    context.go(AppRoutes.trainingSuccess);
-                                  },
+                                  onTap: () => context.go(
+                                    AppRoutes.trainingSession,
+                                    extra: item,
+                                  ),
                                   onToggleComplete: () => ref
                                       .read(workoutPlanProvider.notifier)
                                       .toggleCompleted(item),
@@ -386,6 +385,11 @@ class _WorkoutCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final exerciseNames = item.exercises
+        .map((exercise) => exercise.name)
+        .toList(growable: false);
+    final hasExerciseList = exerciseNames.isNotEmpty;
+
     return GlassCard(
       padding: const EdgeInsets.all(16),
       child: InkWell(
@@ -401,7 +405,10 @@ class _WorkoutCard extends StatelessWidget {
                 color: _focusColor(item.focus),
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: Icon(_focusIcon(item.focus), color: const Color(0xFF1C1C27)),
+              child: Icon(
+                _focusIcon(item.focus),
+                color: const Color(0xFF1C1C27),
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -459,6 +466,17 @@ class _WorkoutCard extends StatelessWidget {
                       height: 1.3,
                     ),
                   ),
+                  if (hasExerciseList) ...[
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        for (final name in exerciseNames)
+                          _ExerciseChip(label: name),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -519,6 +537,32 @@ class _WorkoutCard extends StatelessWidget {
       default:
         return Icons.event_available_rounded;
     }
+  }
+}
+
+class _ExerciseChip extends StatelessWidget {
+  final String label;
+
+  const _ExerciseChip({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: Colors.white.withValues(alpha: 0.82),
+          fontWeight: FontWeight.w800,
+          fontSize: 10,
+        ),
+      ),
+    );
   }
 }
 
