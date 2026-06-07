@@ -1,6 +1,10 @@
+import 'dart:io';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../../../../core/auth/firebase_auth_providers.dart';
 import '../../../../core/widgets/app_bottom_nav.dart';
@@ -22,10 +26,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   final _weightController = TextEditingController();
   final _ageController = TextEditingController();
   String _goal = UserProfile.empty.goal;
+  String _sex = UserProfile.empty.sex;
+  String _activityLevel = UserProfile.empty.activityLevel;
+  int _preferredTrainingDays = UserProfile.empty.preferredTrainingDays;
   bool _isSaving = false;
   bool _isSendingReset = false;
   bool _isSendingVerification = false;
   bool _isLoggingOut = false;
+  bool _isPickingAvatar = false;
   String? _lastHydratedUid;
 
   @override
@@ -52,6 +60,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     _weightController.text = profile.weightKg.toString();
     _ageController.text = profile.age.toString();
     _goal = profile.goal;
+    _sex = profile.sex;
+    _activityLevel = profile.activityLevel;
+    _preferredTrainingDays = profile.preferredTrainingDays;
   }
 
   Future<void> _save(UserProfile currentProfile) async {
@@ -69,22 +80,63 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
     setState(() => _isSaving = true);
     try {
-      await ref.read(userProfileProvider.notifier).save(
+      await ref
+          .read(userProfileProvider.notifier)
+          .save(
             currentProfile.copyWith(
               name: name,
               goal: _goal,
+              sex: _sex,
+              activityLevel: _activityLevel,
+              preferredTrainingDays: _preferredTrainingDays,
               heightCm: height,
               weightKg: weight,
               age: age,
             ),
           );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profile updated.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Profile updated.')));
     } finally {
       if (mounted) {
         setState(() => _isSaving = false);
+      }
+    }
+  }
+
+  Future<void> _pickAvatar(UserProfile currentProfile) async {
+    setState(() => _isPickingAvatar = true);
+    try {
+      final pickedImage = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 800,
+        imageQuality: 85,
+      );
+      if (pickedImage == null) return;
+
+      final directory = await getApplicationDocumentsDirectory();
+      final extension = pickedImage.path.split('.').last;
+      final avatarFile = File(
+        '${directory.path}/avatar_${currentProfile.uid}.$extension',
+      );
+      await File(pickedImage.path).copy(avatarFile.path);
+
+      await ref
+          .read(userProfileProvider.notifier)
+          .save(currentProfile.copyWith(avatarLocalPath: avatarFile.path));
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Avatar updated.')));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Failed to update avatar.')));
+    } finally {
+      if (mounted) {
+        setState(() => _isPickingAvatar = false);
       }
     }
   }
@@ -203,6 +255,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                             ),
                           ),
                           const SizedBox(height: 12),
+                          Center(
+                            child: _AvatarPicker(
+                              avatarLocalPath: profile.avatarLocalPath,
+                              isPicking: _isPickingAvatar,
+                              onTap: () => _pickAvatar(profile),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
                           _InputLabel(label: 'Name'),
                           _ProfileField(controller: _nameController),
                           const SizedBox(height: 12),
@@ -216,21 +276,128 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                                   (goal) => ChoiceChip(
                                     label: Text(goal),
                                     selected: _goal == goal,
-                                    onSelected: (_) => setState(() => _goal = goal),
+                                    onSelected: (_) =>
+                                        setState(() => _goal = goal),
                                     showCheckmark: true,
                                     checkmarkColor: const Color(0xFF1C1C27),
                                     selectedColor: const Color(0xFFF3F0B6),
-                                    backgroundColor: Colors.white.withOpacity(0.10),
+                                    backgroundColor: const Color(0xFF514874),
                                     side: BorderSide(
                                       color: _goal == goal
                                           ? const Color(0xFFF3F0B6)
-                                          : Colors.white.withOpacity(0.16),
+                                          : Colors.white.withOpacity(0.22),
                                     ),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(14),
                                     ),
                                     labelStyle: TextStyle(
                                       color: _goal == goal
+                                          ? const Color(0xFF1C1C27)
+                                          : Colors.white,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                )
+                                .toList(growable: false),
+                          ),
+                          const SizedBox(height: 12),
+                          _InputLabel(label: 'Sex'),
+                          const SizedBox(height: 6),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: ['Male', 'Female', 'Other']
+                                .map(
+                                  (item) => ChoiceChip(
+                                    label: Text(item),
+                                    selected: _sex == item,
+                                    onSelected: (_) =>
+                                        setState(() => _sex = item),
+                                    showCheckmark: true,
+                                    checkmarkColor: const Color(0xFF1C1C27),
+                                    selectedColor: const Color(0xFFF3F0B6),
+                                    backgroundColor: const Color(0xFF514874),
+                                    side: BorderSide(
+                                      color: _sex == item
+                                          ? const Color(0xFFF3F0B6)
+                                          : Colors.white.withOpacity(0.22),
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    labelStyle: TextStyle(
+                                      color: _sex == item
+                                          ? const Color(0xFF1C1C27)
+                                          : Colors.white,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                )
+                                .toList(growable: false),
+                          ),
+                          const SizedBox(height: 12),
+                          _InputLabel(label: 'Activity level'),
+                          const SizedBox(height: 6),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: ['Low', 'Moderate', 'High']
+                                .map(
+                                  (item) => ChoiceChip(
+                                    label: Text(item),
+                                    selected: _activityLevel == item,
+                                    onSelected: (_) =>
+                                        setState(() => _activityLevel = item),
+                                    showCheckmark: true,
+                                    checkmarkColor: const Color(0xFF1C1C27),
+                                    selectedColor: const Color(0xFFF3F0B6),
+                                    backgroundColor: const Color(0xFF514874),
+                                    side: BorderSide(
+                                      color: _activityLevel == item
+                                          ? const Color(0xFFF3F0B6)
+                                          : Colors.white.withOpacity(0.22),
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    labelStyle: TextStyle(
+                                      color: _activityLevel == item
+                                          ? const Color(0xFF1C1C27)
+                                          : Colors.white,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                )
+                                .toList(growable: false),
+                          ),
+                          const SizedBox(height: 12),
+                          _InputLabel(label: 'Training days per week'),
+                          const SizedBox(height: 6),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: List.generate(5, (index) => index + 2)
+                                .map(
+                                  (days) => ChoiceChip(
+                                    label: Text('$days days'),
+                                    selected: _preferredTrainingDays == days,
+                                    onSelected: (_) => setState(
+                                      () => _preferredTrainingDays = days,
+                                    ),
+                                    showCheckmark: true,
+                                    checkmarkColor: const Color(0xFF1C1C27),
+                                    selectedColor: const Color(0xFFF3F0B6),
+                                    backgroundColor: const Color(0xFF514874),
+                                    side: BorderSide(
+                                      color: _preferredTrainingDays == days
+                                          ? const Color(0xFFF3F0B6)
+                                          : Colors.white.withOpacity(0.22),
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    labelStyle: TextStyle(
+                                      color: _preferredTrainingDays == days
                                           ? const Color(0xFF1C1C27)
                                           : Colors.white,
                                       fontWeight: FontWeight.w700,
@@ -279,11 +446,15 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton(
-                              onPressed: _isSaving ? null : () => _save(profile),
+                              onPressed: _isSaving
+                                  ? null
+                                  : () => _save(profile),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.white,
                                 foregroundColor: const Color(0xFF24134D),
-                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
                               ),
                               child: _isSaving
                                   ? const SizedBox(
@@ -295,7 +466,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                                     )
                                   : const Text(
                                       'Save profile',
-                                      style: TextStyle(fontWeight: FontWeight.w800),
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w800,
+                                      ),
                                     ),
                             ),
                           ),
@@ -374,7 +547,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.white,
                                 foregroundColor: const Color(0xFF24134D),
-                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
                               ),
                               child: _isSendingReset
                                   ? const SizedBox(
@@ -386,7 +561,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                                     )
                                   : const Text(
                                       'Send password reset email',
-                                      style: TextStyle(fontWeight: FontWeight.w800),
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w800,
+                                      ),
                                     ),
                             ),
                           ),
@@ -430,7 +607,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                                 side: BorderSide(
                                   color: Colors.white.withOpacity(0.24),
                                 ),
-                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
                               ),
                               child: _isLoggingOut
                                   ? const SizedBox(
@@ -492,6 +671,78 @@ class _InputLabel extends StatelessWidget {
   }
 }
 
+class _AvatarPicker extends StatelessWidget {
+  final String avatarLocalPath;
+  final bool isPicking;
+  final VoidCallback onTap;
+
+  const _AvatarPicker({
+    required this.avatarLocalPath,
+    required this.isPicking,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final avatarFile = avatarLocalPath.isEmpty ? null : File(avatarLocalPath);
+    final hasAvatar = avatarFile != null && avatarFile.existsSync();
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(999),
+      onTap: isPicking ? null : onTap,
+      child: Column(
+        children: [
+          Stack(
+            alignment: Alignment.bottomRight,
+            children: [
+              CircleAvatar(
+                radius: 42,
+                backgroundColor: Colors.white.withOpacity(0.14),
+                backgroundImage: hasAvatar ? FileImage(avatarFile) : null,
+                child: hasAvatar
+                    ? null
+                    : const Icon(
+                        Icons.person_rounded,
+                        color: Colors.white,
+                        size: 42,
+                      ),
+              ),
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF3F0B6),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: const Color(0xFF24134D), width: 2),
+                ),
+                child: isPicking
+                    ? const Padding(
+                        padding: EdgeInsets.all(7),
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(
+                        Icons.camera_alt_rounded,
+                        color: Color(0xFF24134D),
+                        size: 16,
+                      ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            hasAvatar ? 'Change avatar' : 'Upload avatar',
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.76),
+              fontWeight: FontWeight.w800,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _ProfileField extends StatelessWidget {
   final TextEditingController controller;
   final TextInputType? keyboardType;
@@ -505,7 +756,10 @@ class _ProfileField extends StatelessWidget {
       child: TextField(
         controller: controller,
         keyboardType: keyboardType,
-        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w800,
+        ),
         decoration: InputDecoration(
           filled: true,
           fillColor: Colors.white.withOpacity(0.10),

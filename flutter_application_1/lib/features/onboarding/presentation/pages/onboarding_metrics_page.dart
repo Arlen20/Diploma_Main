@@ -19,6 +19,9 @@ class _OnboardingMetricsPageState extends ConsumerState<OnboardingMetricsPage> {
   final _height = TextEditingController();
   final _weight = TextEditingController();
   final _age = TextEditingController();
+  String _sex = 'Male';
+  String _activityLevel = 'Moderate';
+  int _preferredTrainingDays = 4;
   bool _initialized = false;
 
   @override
@@ -37,10 +40,20 @@ class _OnboardingMetricsPageState extends ConsumerState<OnboardingMetricsPage> {
         : <String, dynamic>{};
     final profile = ref.watch(userProfileProvider).valueOrNull;
 
-    if (!_initialized && profile != null) {
-      _height.text = profile.heightCm.toString();
-      _weight.text = profile.weightKg.toString();
-      _age.text = profile.age.toString();
+    if (!_initialized) {
+      final source = profile;
+      _height.text = (payload['height'] ?? source?.heightCm ?? '').toString();
+      _weight.text = (payload['weight'] ?? source?.weightKg ?? '').toString();
+      _age.text = (payload['age'] ?? source?.age ?? '').toString();
+      _sex = payload['sex'] as String? ?? source?.sex ?? _sex;
+      _activityLevel =
+          payload['activityLevel'] as String? ??
+          source?.activityLevel ??
+          _activityLevel;
+      _preferredTrainingDays =
+          (payload['preferredTrainingDays'] as num?)?.toInt() ??
+          source?.preferredTrainingDays ??
+          _preferredTrainingDays;
       _initialized = true;
     }
 
@@ -51,8 +64,7 @@ class _OnboardingMetricsPageState extends ConsumerState<OnboardingMetricsPage> {
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 18, 20, 110),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: ListView(
                   children: [
                     const SizedBox(height: 6),
                     Row(
@@ -125,7 +137,77 @@ class _OnboardingMetricsPageState extends ConsumerState<OnboardingMetricsPage> {
                         ],
                       ),
                     ),
-                    const Spacer(),
+                    const SizedBox(height: 14),
+                    GlassCard(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Body profile',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 14,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          _SectionLabel(label: 'Sex'),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: ['Male', 'Female', 'Other']
+                                .map(
+                                  (item) => _ChoicePill(
+                                    label: item,
+                                    selected: _sex == item,
+                                    onTap: () => setState(() => _sex = item),
+                                  ),
+                                )
+                                .toList(growable: false),
+                          ),
+                          const SizedBox(height: 14),
+                          _SectionLabel(label: 'Activity level'),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: ['Low', 'Moderate', 'High']
+                                .map(
+                                  (item) => _ChoicePill(
+                                    label: item,
+                                    selected: _activityLevel == item,
+                                    onTap: () => setState(
+                                      () => _activityLevel = item,
+                                    ),
+                                  ),
+                                )
+                                .toList(growable: false),
+                          ),
+                          const SizedBox(height: 14),
+                          _SectionLabel(label: 'Training days per week'),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: List.generate(
+                              5,
+                              (index) => index + 2,
+                            ).map(
+                              (days) => _ChoicePill(
+                                label: '$days days',
+                                selected: _preferredTrainingDays == days,
+                                onTap: () => setState(
+                                  () => _preferredTrainingDays = days,
+                                ),
+                              ),
+                            ).toList(growable: false),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 18),
                     Row(
                       children: const [
                         _Dot(active: false),
@@ -200,6 +282,9 @@ class _OnboardingMetricsPageState extends ConsumerState<OnboardingMetricsPage> {
                               'height': height,
                               'weight': weight,
                               'age': age,
+                              'sex': _sex,
+                              'activityLevel': _activityLevel,
+                              'preferredTrainingDays': _preferredTrainingDays,
                             };
                             context.go(
                               AppRoutes.onboardingFinish,
@@ -230,6 +315,57 @@ class _OnboardingMetricsPageState extends ConsumerState<OnboardingMetricsPage> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _SectionLabel extends StatelessWidget {
+  final String label;
+
+  const _SectionLabel({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      label,
+      style: TextStyle(
+        color: Colors.white.withOpacity(0.72),
+        fontWeight: FontWeight.w800,
+        fontSize: 12,
+      ),
+    );
+  }
+}
+
+class _ChoicePill extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _ChoicePill({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ChoiceChip(
+      label: Text(label),
+      selected: selected,
+      onSelected: (_) => onTap(),
+      showCheckmark: false,
+      selectedColor: const Color(0xFFF3F0B6),
+      backgroundColor: const Color(0xFF514874),
+      side: BorderSide(
+        color: selected
+            ? const Color(0xFFF3F0B6)
+            : Colors.white.withOpacity(0.22),
+      ),
+      labelStyle: TextStyle(
+        color: selected ? const Color(0xFF1C1C27) : Colors.white,
+        fontWeight: FontWeight.w800,
       ),
     );
   }

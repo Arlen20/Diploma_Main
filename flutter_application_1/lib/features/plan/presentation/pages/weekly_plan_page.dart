@@ -1,22 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/core/routing/app_routes.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_bottom_nav.dart';
 import '../../../../core/widgets/glass_card.dart';
 import '../../../../core/widgets/gradient_background.dart';
+import '../../../profile_settings/presentation/state/user_profile_provider.dart';
+import '../../domain/entities/workout_plan_entry.dart';
+import '../state/workout_plan_provider.dart';
 
-class WeeklyPlanPage extends StatefulWidget {
+class WeeklyPlanPage extends ConsumerStatefulWidget {
   const WeeklyPlanPage({super.key});
 
   @override
-  State<WeeklyPlanPage> createState() => _WeeklyPlanPageState();
+  ConsumerState<WeeklyPlanPage> createState() => _WeeklyPlanPageState();
 }
 
-class _WeeklyPlanPageState extends State<WeeklyPlanPage> {
+class _WeeklyPlanPageState extends ConsumerState<WeeklyPlanPage> {
   late final DateTime _weekStart;
   late int _selectedIndex;
+  bool _isGenerating = false;
 
   static const _weekdayShort = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
   static const _monthNames = [
@@ -34,78 +39,6 @@ class _WeeklyPlanPageState extends State<WeeklyPlanPage> {
     'December',
   ];
 
-  static const Map<int, List<_WorkoutPlanItem>> _weeklyPlans = {
-    DateTime.monday: [
-      _WorkoutPlanItem(
-        title: 'Warm Up Run',
-        timeLabel: '08:00',
-        subtitle: '12 min light cardio and breathing prep',
-        color: Color(0xFFFFCDEB),
-        icon: Icons.directions_run_rounded,
-      ),
-      _WorkoutPlanItem(
-        title: 'Upper Body Strength',
-        timeLabel: '18:00',
-        subtitle: 'Pushups, rows, shoulder press, 3 rounds',
-        color: Color(0xFFF4F0B6),
-        icon: Icons.fitness_center_rounded,
-      ),
-    ],
-    DateTime.tuesday: [
-      _WorkoutPlanItem(
-        title: 'Mobility Session',
-        timeLabel: '09:30',
-        subtitle: 'Hips, spine, ankles, 20 min recovery flow',
-        color: Color(0xFFCFE8FF),
-        icon: Icons.self_improvement_rounded,
-      ),
-    ],
-    DateTime.wednesday: [
-      _WorkoutPlanItem(
-        title: 'Core Builder',
-        timeLabel: '07:30',
-        subtitle: 'Planks, dead bugs, leg raises, 4 rounds',
-        color: Color(0xFFE0D2FF),
-        icon: Icons.bolt_rounded,
-      ),
-      _WorkoutPlanItem(
-        title: 'Evening Walk',
-        timeLabel: '20:00',
-        subtitle: '30 min low-intensity recovery walk',
-        color: Color(0xFFF4F0B6),
-        icon: Icons.directions_walk_rounded,
-      ),
-    ],
-    DateTime.thursday: [
-      _WorkoutPlanItem(
-        title: 'Lower Body Focus',
-        timeLabel: '17:30',
-        subtitle: 'Squats, lunges, glute bridge, calf raises',
-        color: Color(0xFFFFDFC0),
-        icon: Icons.accessibility_new_rounded,
-      ),
-    ],
-    DateTime.friday: [
-      _WorkoutPlanItem(
-        title: 'Conditioning Circuit',
-        timeLabel: '18:30',
-        subtitle: 'Jump rope, burpees, mountain climbers',
-        color: Color(0xFFFFCDEB),
-        icon: Icons.local_fire_department_rounded,
-      ),
-    ],
-    DateTime.saturday: [
-      _WorkoutPlanItem(
-        title: 'Stretch + Recovery',
-        timeLabel: '10:00',
-        subtitle: 'Full-body flexibility and breath work',
-        color: Color(0xFFCFE8FF),
-        icon: Icons.spa_rounded,
-      ),
-    ],
-    DateTime.sunday: [],
-  };
-
   @override
   void initState() {
     super.initState();
@@ -114,12 +47,58 @@ class _WeeklyPlanPageState extends State<WeeklyPlanPage> {
     _selectedIndex = now.weekday - 1;
   }
 
+  Future<void> _generatePlan() async {
+    final profile = ref.read(userProfileProvider).valueOrNull;
+    if (profile == null || profile.uid.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Load your profile first.')));
+      return;
+    }
+
+    setState(() => _isGenerating = true);
+    try {
+      await ref.read(workoutPlanProvider.notifier).generate(profile);
+      if (!mounted) return;
+      final nextState = ref.read(workoutPlanProvider);
+      if (nextState.hasError) {
+        final message = nextState.error.toString();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              message.contains('permission-denied')
+                  ? 'Plan generation failed. Publish the updated Firestore rules for plans first.'
+                  : 'Plan generation failed: $message',
+            ),
+          ),
+        );
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Prototype AI plan generated for ${profile.goal.toLowerCase()}.',
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isGenerating = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final selectedDate = _weekStart.add(Duration(days: _selectedIndex));
-    final selectedPlans = _weeklyPlans[selectedDate.weekday] ?? const [];
     final headingDate =
         '${selectedDate.day} ${_monthNames[selectedDate.month - 1]} ${selectedDate.year}';
+    final planState = ref.watch(workoutPlanProvider);
+    final profile = ref.watch(userProfileProvider).valueOrNull;
+    final allPlans = planState.valueOrNull ?? const <WorkoutPlanEntry>[];
+    final selectedPlans = allPlans
+        .where((item) => item.dayOfWeek == selectedDate.weekday)
+        .toList(growable: false);
 
     return Scaffold(
       body: GradientBackground(
@@ -159,8 +138,9 @@ class _WeeklyPlanPageState extends State<WeeklyPlanPage> {
                         itemBuilder: (context, index) {
                           final date = _weekStart.add(Duration(days: index));
                           final isSelected = index == _selectedIndex;
-                          final hasWorkout =
-                              (_weeklyPlans[date.weekday] ?? const []).isNotEmpty;
+                          final hasWorkout = allPlans.any(
+                            (item) => item.dayOfWeek == date.weekday,
+                          );
                           return _DayCard(
                             label: _weekdayShort[index],
                             dayNumber: date.day,
@@ -174,49 +154,84 @@ class _WeeklyPlanPageState extends State<WeeklyPlanPage> {
                     const SizedBox(height: 18),
                     GlassCard(
                       padding: const EdgeInsets.all(18),
-                      child: Row(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.14),
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Icon(
-                              selectedPlans.isEmpty
-                                  ? Icons.bedtime_rounded
-                                  : Icons.event_available_rounded,
-                              color: Colors.white,
-                            ),
+                          Row(
+                            children: [
+                              Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.14),
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: Icon(
+                                  allPlans.isEmpty
+                                      ? Icons.auto_awesome_rounded
+                                      : Icons.psychology_alt_rounded,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      allPlans.isEmpty
+                                          ? 'No plan generated yet'
+                                          : '${selectedPlans.length} session${selectedPlans.length == 1 ? '' : 's'} for this day',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w900,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      profile == null
+                                          ? 'Sign in to generate a prototype AI weekly plan.'
+                                          : 'Goal: ${profile.goal}. Activity: ${profile.activityLevel}. ${profile.preferredTrainingDays} training days selected.',
+                                      style: TextStyle(
+                                        color: Colors.white.withOpacity(0.66),
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  selectedPlans.isEmpty
-                                      ? 'Recovery day'
-                                      : '${selectedPlans.length} workout${selectedPlans.length == 1 ? '' : 's'} planned',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w900,
-                                    fontSize: 16,
-                                  ),
+                          const SizedBox(height: 14),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: _isGenerating ? null : _generatePlan,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                foregroundColor: const Color(0xFF24134D),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
                                 ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  selectedPlans.isEmpty
-                                      ? 'Use the day for stretching, walking, and sleep.'
-                                      : 'Tap a card below to review the session details.',
-                                  style: TextStyle(
-                                    color: Colors.white.withOpacity(0.66),
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
+                              ),
+                              child: _isGenerating
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : Text(
+                                      allPlans.isEmpty
+                                          ? 'Generate plan'
+                                          : 'Regenerate plan',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
                             ),
                           ),
                         ],
@@ -233,7 +248,18 @@ class _WeeklyPlanPageState extends State<WeeklyPlanPage> {
                     ),
                     const SizedBox(height: 12),
                     Expanded(
-                      child: selectedPlans.isEmpty
+                      child: planState.isLoading
+                          ? const Center(
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                              ),
+                            )
+                          : planState.hasError
+                          ? _PlanErrorState(
+                              message: planState.error.toString(),
+                              onRetry: _generatePlan,
+                            )
+                          : selectedPlans.isEmpty
                           ? _EmptyPlanState(dateLabel: headingDate)
                           : ListView.separated(
                               itemCount: selectedPlans.length,
@@ -243,7 +269,13 @@ class _WeeklyPlanPageState extends State<WeeklyPlanPage> {
                                 final item = selectedPlans[index];
                                 return _WorkoutCard(
                                   item: item,
-                                  onTap: () => context.go(AppRoutes.trainingSuccess),
+                                  onTap: () => context.go(
+                                    AppRoutes.trainingSession,
+                                    extra: item,
+                                  ),
+                                  onToggleComplete: () => ref
+                                      .read(workoutPlanProvider.notifier)
+                                      .toggleCompleted(item),
                                 );
                               },
                             ),
@@ -341,13 +373,23 @@ class _DayCard extends StatelessWidget {
 }
 
 class _WorkoutCard extends StatelessWidget {
-  final _WorkoutPlanItem item;
+  final WorkoutPlanEntry item;
   final VoidCallback onTap;
+  final VoidCallback onToggleComplete;
 
-  const _WorkoutCard({required this.item, required this.onTap});
+  const _WorkoutCard({
+    required this.item,
+    required this.onTap,
+    required this.onToggleComplete,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final exerciseNames = item.exercises
+        .map((exercise) => exercise.name)
+        .toList(growable: false);
+    final hasExerciseList = exerciseNames.isNotEmpty;
+
     return GlassCard(
       padding: const EdgeInsets.all(16),
       child: InkWell(
@@ -360,23 +402,50 @@ class _WorkoutCard extends StatelessWidget {
               width: 46,
               height: 46,
               decoration: BoxDecoration(
-                color: item.color,
+                color: _focusColor(item.focus),
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: Icon(item.icon, color: const Color(0xFF1C1C27)),
+              child: Icon(
+                _focusIcon(item.focus),
+                color: const Color(0xFF1C1C27),
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    item.timeLabel,
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.62),
-                      fontWeight: FontWeight.w800,
-                      fontSize: 11,
-                    ),
+                  Row(
+                    children: [
+                      Text(
+                        item.timeLabel,
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.62),
+                          fontWeight: FontWeight.w800,
+                          fontSize: 11,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      if (item.completed)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.green.withOpacity(0.18),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: const Text(
+                            'Completed',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                   const SizedBox(height: 6),
                   Text(
@@ -397,24 +466,100 @@ class _WorkoutCard extends StatelessWidget {
                       height: 1.3,
                     ),
                   ),
+                  if (hasExerciseList) ...[
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        for (final name in exerciseNames)
+                          _ExerciseChip(label: name),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
             const SizedBox(width: 10),
-            Container(
-              width: 34,
-              height: 34,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(12),
+            IconButton(
+              onPressed: onToggleComplete,
+              style: IconButton.styleFrom(
+                backgroundColor: Colors.white.withOpacity(0.12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
-              child: Icon(
-                Icons.play_arrow_rounded,
-                color: AppColors.accent,
-                size: 20,
+              icon: Icon(
+                item.completed
+                    ? Icons.check_circle_rounded
+                    : Icons.radio_button_unchecked_rounded,
+                color: item.completed ? Colors.greenAccent : AppColors.accent,
+                size: 22,
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Color _focusColor(String focus) {
+    switch (focus) {
+      case 'legs':
+        return const Color(0xFFFFDFC0);
+      case 'upper body':
+      case 'back':
+        return const Color(0xFFCFE8FF);
+      case 'core':
+        return const Color(0xFFE0D2FF);
+      case 'cardio':
+        return const Color(0xFFFFCDEB);
+      case 'mobility':
+        return const Color(0xFFF4F0B6);
+      default:
+        return const Color(0xFFF4F0B6);
+    }
+  }
+
+  IconData _focusIcon(String focus) {
+    switch (focus) {
+      case 'legs':
+        return Icons.accessibility_new_rounded;
+      case 'upper body':
+      case 'back':
+        return Icons.fitness_center_rounded;
+      case 'core':
+        return Icons.bolt_rounded;
+      case 'cardio':
+        return Icons.directions_run_rounded;
+      case 'mobility':
+        return Icons.self_improvement_rounded;
+      default:
+        return Icons.event_available_rounded;
+    }
+  }
+}
+
+class _ExerciseChip extends StatelessWidget {
+  final String label;
+
+  const _ExerciseChip({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: Colors.white.withValues(alpha: 0.82),
+          fontWeight: FontWeight.w800,
+          fontSize: 10,
         ),
       ),
     );
@@ -442,14 +587,14 @@ class _EmptyPlanState extends StatelessWidget {
                 borderRadius: BorderRadius.circular(20),
               ),
               child: const Icon(
-                Icons.bedtime_rounded,
+                Icons.auto_awesome_rounded,
                 color: Colors.white,
                 size: 30,
               ),
             ),
             const SizedBox(height: 14),
             const Text(
-              'No workout planned',
+              'No session for this day',
               style: TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.w900,
@@ -458,7 +603,7 @@ class _EmptyPlanState extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Use $dateLabel as a recovery day or add a light mobility session later.',
+              'Generate a plan or use $dateLabel as a recovery day.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: Colors.white.withOpacity(0.66),
@@ -474,18 +619,70 @@ class _EmptyPlanState extends StatelessWidget {
   }
 }
 
-class _WorkoutPlanItem {
-  final String title;
-  final String timeLabel;
-  final String subtitle;
-  final Color color;
-  final IconData icon;
+class _PlanErrorState extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
 
-  const _WorkoutPlanItem({
-    required this.title,
-    required this.timeLabel,
-    required this.subtitle,
-    required this.color,
-    required this.icon,
-  });
+  const _PlanErrorState({required this.message, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassCard(
+      padding: const EdgeInsets.all(20),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.14),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Icon(
+                Icons.error_outline_rounded,
+                color: Colors.white,
+                size: 30,
+              ),
+            ),
+            const SizedBox(height: 14),
+            const Text(
+              'Plan generation failed',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w900,
+                fontSize: 18,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              message.contains('permission-denied')
+                  ? 'Firestore rejected access to plans. Publish the latest rules in Firebase Console.'
+                  : message,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.66),
+                fontWeight: FontWeight.w700,
+                fontSize: 12,
+                height: 1.35,
+              ),
+            ),
+            const SizedBox(height: 14),
+            ElevatedButton(
+              onPressed: onRetry,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: const Color(0xFF24134D),
+              ),
+              child: const Text(
+                'Try again',
+                style: TextStyle(fontWeight: FontWeight.w900),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -11,6 +13,8 @@ import '../../../../core/widgets/glass_card.dart';
 import '../../../../core/widgets/gradient_background.dart';
 import '../../../nutrition/domain/entities/meal_log.dart';
 import '../../../nutrition/presentation/state/meal_history_notifier.dart';
+import '../../../plan/domain/entities/workout_plan_entry.dart';
+import '../../../plan/presentation/state/workout_plan_provider.dart';
 import '../../../profile_settings/presentation/state/user_profile_provider.dart';
 
 class HomeShellPage extends ConsumerWidget {
@@ -19,20 +23,36 @@ class HomeShellPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(userProfileProvider).valueOrNull;
+    final workoutPlanState = ref.watch(workoutPlanProvider);
+    final workoutPlan =
+        workoutPlanState.valueOrNull ?? const <WorkoutPlanEntry>[];
     final mealHistoryState = ref.watch(mealHistoryProvider);
     final mealHistory = mealHistoryState.valueOrNull ?? const <MealLog>[];
     final today = DateTime.now();
-    final todaysMeals = mealHistory.where((meal) {
-      final createdAt = meal.createdAt;
-      return createdAt.year == today.year &&
-          createdAt.month == today.month &&
-          createdAt.day == today.day;
-    }).toList(growable: false);
+    final todaysMeals = mealHistory
+        .where((meal) {
+          final createdAt = meal.createdAt;
+          return createdAt.year == today.year &&
+              createdAt.month == today.month &&
+              createdAt.day == today.day;
+        })
+        .toList(growable: false);
     final todaysCalories = todaysMeals.fold<int>(
       0,
       (sum, meal) => sum + meal.result.calories,
     );
     final latestMeal = mealHistory.isEmpty ? null : mealHistory.first;
+    final todaysWorkouts = workoutPlan
+        .where((item) => item.dayOfWeek == today.weekday)
+        .toList(growable: false);
+    WorkoutPlanEntry? todaysWorkout;
+    for (final workout in todaysWorkouts) {
+      if (!workout.completed) {
+        todaysWorkout = workout;
+        break;
+      }
+    }
+    todaysWorkout ??= todaysWorkouts.isEmpty ? null : todaysWorkouts.first;
 
     return Scaffold(
       body: GradientBackground(
@@ -41,7 +61,11 @@ class HomeShellPage extends ConsumerWidget {
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 18),
             child: Column(
               children: [
-                _TopHeader(name: profile?.name ?? 'User'),
+                _TopHeader(
+                  name: profile?.name ?? 'User',
+                  avatarLocalPath: profile?.avatarLocalPath ?? '',
+                  onAvatarTap: () => context.go(AppRoutes.settings),
+                ),
                 const SizedBox(height: 18),
                 _NutritionCard(
                   onAddMeal: () => context.push(AppRoutes.addMeal),
@@ -59,7 +83,16 @@ class HomeShellPage extends ConsumerWidget {
                 const SizedBox(height: 22),
                 _ScheduleHeader(goal: profile?.goal ?? 'Maintain'),
                 const SizedBox(height: 14),
-                _ScheduleTimeline(onStart: () {}),
+                _ScheduleTimeline(
+                  workout: todaysWorkout,
+                  isLoading: workoutPlanState.isLoading,
+                  onStart: todaysWorkout == null
+                      ? () => context.go(AppRoutes.schedule)
+                      : () => context.go(
+                          AppRoutes.trainingSession,
+                          extra: todaysWorkout,
+                        ),
+                ),
                 const Spacer(),
                 const AppBottomNav(selectedIndex: 0),
               ],
@@ -73,8 +106,14 @@ class HomeShellPage extends ConsumerWidget {
 
 class _TopHeader extends StatelessWidget {
   final String name;
+  final String avatarLocalPath;
+  final VoidCallback onAvatarTap;
 
-  const _TopHeader({required this.name});
+  const _TopHeader({
+    required this.name,
+    required this.avatarLocalPath,
+    required this.onAvatarTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -82,51 +121,70 @@ class _TopHeader extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(child: Text('Hi,\n$name', style: AppText.titleBig)),
-        const _SearchPill(),
+        _SearchPill(avatarLocalPath: avatarLocalPath, onTap: onAvatarTap),
       ],
     );
   }
 }
 
 class _SearchPill extends StatelessWidget {
-  const _SearchPill();
+  final String avatarLocalPath;
+  final VoidCallback onTap;
+
+  const _SearchPill({required this.avatarLocalPath, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 44,
-      padding: const EdgeInsets.all(6),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.white.withOpacity(0.16)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.22),
-              borderRadius: BorderRadius.circular(999),
-            ),
-            child: const Icon(Icons.search, color: Colors.white, size: 18),
-          ),
-          const SizedBox(width: 8),
-          Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: Colors.white.withOpacity(0.35)),
-              image: const DecorationImage(
-                image: NetworkImage('https://i.pravatar.cc/100?img=12'),
-                fit: BoxFit.cover,
+    final avatarFile = avatarLocalPath.isEmpty ? null : File(avatarLocalPath);
+    final hasAvatar = avatarFile != null && avatarFile.existsSync();
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(999),
+      onTap: onTap,
+      child: Container(
+        height: 44,
+        padding: const EdgeInsets.all(6),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.12),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: Colors.white.withOpacity(0.16)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.22),
+                borderRadius: BorderRadius.circular(999),
               ),
+              child: const Icon(Icons.search, color: Colors.white, size: 18),
             ),
-          ),
-          const SizedBox(width: 6),
-        ],
+            const SizedBox(width: 8),
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: Colors.white.withOpacity(0.35)),
+                image: hasAvatar
+                    ? DecorationImage(
+                        image: FileImage(avatarFile),
+                        fit: BoxFit.cover,
+                      )
+                    : null,
+              ),
+              child: hasAvatar
+                  ? null
+                  : const Icon(
+                      Icons.person_rounded,
+                      color: Colors.white,
+                      size: 18,
+                    ),
+            ),
+            const SizedBox(width: 6),
+          ],
+        ),
       ),
     );
   }
@@ -384,12 +442,28 @@ class _ScheduleHeader extends StatelessWidget {
 }
 
 class _ScheduleTimeline extends StatelessWidget {
+  final WorkoutPlanEntry? workout;
+  final bool isLoading;
   final VoidCallback onStart;
 
-  const _ScheduleTimeline({required this.onStart});
+  const _ScheduleTimeline({
+    required this.workout,
+    required this.isLoading,
+    required this.onStart,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final exerciseSummary = workout == null
+        ? 'Open schedule to generate or choose a workout.'
+        : workout!.exercises.isEmpty
+        ? workout!.subtitle
+        : workout!.exercises.map((exercise) => exercise.name).join(', ');
+    final title = isLoading
+        ? 'Loading today'
+        : workout?.title ?? 'No training today';
+    final buttonLabel = workout == null ? 'Schedule' : 'Start';
+
     return Column(
       children: [
         Row(
@@ -404,10 +478,12 @@ class _ScheduleTimeline extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 12),
-            const Expanded(
+            Expanded(
               child: Text(
-                'WarmUp',
-                style: TextStyle(
+                title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
                   color: Colors.white,
@@ -424,17 +500,17 @@ class _ScheduleTimeline extends StatelessWidget {
                   color: AppColors.accent,
                   borderRadius: BorderRadius.circular(999),
                 ),
-                child: const Row(
+                child: Row(
                   children: [
                     Text(
-                      'Start',
-                      style: TextStyle(
+                      buttonLabel,
+                      style: const TextStyle(
                         fontWeight: FontWeight.w900,
                         color: AppColors.primaryBtnText,
                       ),
                     ),
-                    SizedBox(width: 8),
-                    Icon(
+                    const SizedBox(width: 8),
+                    const Icon(
                       Icons.play_arrow,
                       size: 20,
                       color: AppColors.primaryBtnText,
@@ -472,7 +548,7 @@ class _ScheduleTimeline extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.only(left: 26),
             child: Text(
-              'Muscle Up\n10 reps, 3 sets with 20 sec rest',
+              exerciseSummary,
               style: TextStyle(
                 color: Colors.white.withOpacity(0.28),
                 fontSize: 12,
