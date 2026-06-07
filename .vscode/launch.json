@@ -5,6 +5,14 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "flutter_application_1 + Meal Emulator",
+            "cwd": "flutter_application_1",
+            "request": "launch",
+            "type": "dart",
+            "deviceId": "chrome",
+            "preLaunchTask": "Start Meal Functions Emulator"
+        },
+        {
             "name": "flutter_application_1",
             "cwd": "flutter_application_1",
             "request": "launch",

@@ -1,10 +1,11 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/core/routing/app_routes.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../data/datasources/mock_meal_analyzer.dart';
+import '../../data/datasources/remote_meal_analyzer.dart';
 import '../../domain/entities/meal_result.dart';
 
 class AnalyzingMealPage extends StatefulWidget {
@@ -15,7 +16,16 @@ class AnalyzingMealPage extends StatefulWidget {
 }
 
 class _AnalyzingMealPageState extends State<AnalyzingMealPage> {
-  final _analyzer = MockMealAnalyzer();
+  static const _remoteEndpoint =
+      'https://us-central1-diploma-fitness-app.cloudfunctions.net/analyzeMeal';
+  static const _localEndpoint =
+      'http://127.0.0.1:5001/diploma-fitness-app/us-central1/analyzeMeal';
+  static const _endpointOverride = String.fromEnvironment(
+    'MEAL_ANALYZER_URL',
+    defaultValue: '',
+  );
+
+  late final _analyzer = RemoteMealAnalyzer(endpoints: _analyzerEndpoints());
   final _progressMessages = const [
     'Reading the meal photo',
     'Estimating portion size',
@@ -25,11 +35,20 @@ class _AnalyzingMealPageState extends State<AnalyzingMealPage> {
   Timer? _stageTimer;
   int _stageIndex = 0;
   bool _canceled = false;
+  bool _started = false;
+  String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
     _startProgress();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_started) return;
+    _started = true;
     _run();
   }
 
@@ -51,23 +70,64 @@ class _AnalyzingMealPageState extends State<AnalyzingMealPage> {
   }
 
   Future<void> _run() async {
-    final MealResult result = await _analyzer.analyze();
-    if (!mounted || _canceled) return;
+    final payload = _payload(context);
+    final imageBytes = payload['imageBytes'];
+    final imageMimeType = payload['imageMimeType'] as String? ?? 'image/jpeg';
 
+    if (imageBytes is! Uint8List) {
+      _showError('Meal image is missing. Please choose a photo again.');
+      return;
+    }
+
+    try {
+      final MealResult result = await _analyzer.analyze(
+        imageBytes: imageBytes,
+        mimeType: imageMimeType,
+      );
+      if (!mounted || _canceled) return;
+
+      _stageTimer?.cancel();
+      context.go(
+        AppRoutes.mealResult,
+        extra: <String, dynamic>{
+          'result': result,
+          'imageBytes': imageBytes,
+          'imageMimeType': imageMimeType,
+        },
+      );
+    } catch (error) {
+      _showError(error.toString());
+    }
+  }
+
+  List<Uri> _analyzerEndpoints() {
+    if (_endpointOverride.isNotEmpty) {
+      return [Uri.parse(_endpointOverride)];
+    }
+
+    final host = Uri.base.host;
+    final isLocalFlutterWeb =
+        host == 'localhost' || host == '127.0.0.1' || host == '::1';
+
+    if (isLocalFlutterWeb) {
+      return [Uri.parse(_localEndpoint)];
+    }
+
+    return [Uri.parse(_remoteEndpoint)];
+  }
+
+  void _showError(String message) {
+    if (!mounted || _canceled) return;
     _stageTimer?.cancel();
-    context.go(AppRoutes.mealResult, extra: result);
+    setState(() => _errorMessage = message);
   }
 
   @override
   Widget build(BuildContext context) {
-    final extra = GoRouterState.of(context).extra;
-    final payload = extra is Map<String, dynamic>
-        ? Map<String, dynamic>.from(extra)
-        : const <String, dynamic>{};
-    final sourceLabel =
-        (payload['sourceLabel'] as String?) ?? 'meal photo';
-    final previewAsset =
-        (payload['previewAsset'] as String?) ?? 'assets/images/meal.jpg';
+    final payload = _payload(context);
+    final sourceLabel = (payload['sourceLabel'] as String?) ?? 'meal photo';
+    final imageBytes = payload['imageBytes'];
+    final errorMessage = _errorMessage;
 
     return Scaffold(
       body: Container(
@@ -127,12 +187,19 @@ class _AnalyzingMealPageState extends State<AnalyzingMealPage> {
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(22),
-                    child: Image.asset(
-                      previewAsset,
-                      height: 220,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                    ),
+                    child: imageBytes is Uint8List
+                        ? Image.memory(
+                            imageBytes,
+                            height: 220,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                          )
+                        : Image.asset(
+                            'assets/images/meal.jpg',
+                            height: 220,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                          ),
                   ),
                 ),
                 const SizedBox(height: 18),
@@ -148,73 +215,98 @@ class _AnalyzingMealPageState extends State<AnalyzingMealPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: [
-                            SizedBox(
-                              width: 58,
-                              height: 58,
-                              child: CircularProgressIndicator(
-                                value: (_stageIndex + 1) /
-                                    _progressMessages.length,
-                                strokeWidth: 7,
-                                backgroundColor: Colors.white.withOpacity(0.18),
-                                valueColor: const AlwaysStoppedAnimation(
-                                  Color(0xFF1B1736),
+                        if (errorMessage == null)
+                          Row(
+                            children: [
+                              SizedBox(
+                                width: 58,
+                                height: 58,
+                                child: CircularProgressIndicator(
+                                  value: (_stageIndex + 1) /
+                                      _progressMessages.length,
+                                  strokeWidth: 7,
+                                  backgroundColor: Colors.white.withOpacity(
+                                    0.18,
+                                  ),
+                                  valueColor: const AlwaysStoppedAnimation(
+                                    Color(0xFF1B1736),
+                                  ),
                                 ),
                               ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'AI analysis in progress',
+                                      style: TextStyle(
+                                        color: Color(0xFF1C1C27),
+                                        fontWeight: FontWeight.w900,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      _progressMessages[_stageIndex],
+                                      style: TextStyle(
+                                        color: const Color(
+                                          0xFF1C1C27,
+                                        ).withOpacity(0.60),
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          )
+                        else
+                          _ErrorPanel(message: errorMessage),
+                        const SizedBox(height: 20),
+                        if (errorMessage == null)
+                          ...List.generate(_progressMessages.length, (index) {
+                            final isDone = index < _stageIndex;
+                            final isActive = index == _stageIndex;
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: _StageRow(
+                                text: _progressMessages[index],
+                                isDone: isDone,
+                                isActive: isActive,
+                              ),
+                            );
+                          }),
+                        const Spacer(),
+                        if (errorMessage == null)
+                          Text(
+                            'Please wait a few seconds. You will be redirected automatically when the analysis is ready.',
+                            style: TextStyle(
+                              color: const Color(0xFF1C1C27).withOpacity(0.56),
+                              fontWeight: FontWeight.w700,
+                              fontSize: 12,
+                              height: 1.35,
                             ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'AI analysis in progress',
-                                    style: TextStyle(
-                                      color: Color(0xFF1C1C27),
-                                      fontWeight: FontWeight.w900,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    _progressMessages[_stageIndex],
-                                    style: TextStyle(
-                                      color: const Color(
-                                        0xFF1C1C27,
-                                      ).withOpacity(0.60),
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ],
+                          )
+                        else
+                          SizedBox(
+                            width: double.infinity,
+                            height: 52,
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF1B1736),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(18),
+                                ),
+                              ),
+                              onPressed: () => context.go(AppRoutes.addMeal),
+                              child: const Text(
+                                'Choose another photo',
+                                style: TextStyle(fontWeight: FontWeight.w900),
                               ),
                             ),
-                          ],
-                        ),
-                        const SizedBox(height: 20),
-                        ...List.generate(_progressMessages.length, (index) {
-                          final isDone = index < _stageIndex;
-                          final isActive = index == _stageIndex;
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: _StageRow(
-                              text: _progressMessages[index],
-                              isDone: isDone,
-                              isActive: isActive,
-                            ),
-                          );
-                        }),
-                        const Spacer(),
-                        Text(
-                          'Please wait a few seconds. You will be redirected automatically when the analysis is ready.',
-                          style: TextStyle(
-                            color: const Color(0xFF1C1C27).withOpacity(0.56),
-                            fontWeight: FontWeight.w700,
-                            fontSize: 12,
-                            height: 1.35,
                           ),
-                        ),
                       ],
                     ),
                   ),
@@ -224,6 +316,66 @@ class _AnalyzingMealPageState extends State<AnalyzingMealPage> {
           ),
         ),
       ),
+    );
+  }
+}
+
+Map<String, dynamic> _payload(BuildContext context) {
+  final extra = GoRouterState.of(context).extra;
+  return extra is Map<String, dynamic>
+      ? Map<String, dynamic>.from(extra)
+      : const <String, dynamic>{};
+}
+
+class _ErrorPanel extends StatelessWidget {
+  final String message;
+
+  const _ErrorPanel({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 42,
+          height: 42,
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFCDEB),
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: const Icon(
+            Icons.error_outline_rounded,
+            color: Color(0xFF1C1C27),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Analysis failed',
+                style: TextStyle(
+                  color: Color(0xFF1C1C27),
+                  fontWeight: FontWeight.w900,
+                  fontSize: 16,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                message,
+                style: TextStyle(
+                  color: const Color(0xFF1C1C27).withOpacity(0.62),
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12,
+                  height: 1.3,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

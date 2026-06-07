@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -104,6 +106,8 @@ class MealHistoryPage extends ConsumerWidget {
                             extra: <String, dynamic>{
                               'result': result,
                               'readOnly': true,
+                              'imageBase64': item.imageBase64,
+                              'imageMimeType': item.imageMimeType,
                             },
                           );
                         },
@@ -113,8 +117,8 @@ class MealHistoryPage extends ConsumerWidget {
                             children: [
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(14),
-                                child: Image.asset(
-                                  'assets/images/meal.jpg',
+                                child: Image(
+                                  image: _imageProviderFor(item),
                                   width: 64,
                                   height: 64,
                                   fit: BoxFit.cover,
@@ -184,4 +188,16 @@ class MealHistoryPage extends ConsumerWidget {
 
 String _macroLine(MealResult result) {
   return '${result.calories} kcal | P ${result.protein}g | C ${result.carbs}g | F ${result.fat}g';
+}
+
+ImageProvider _imageProviderFor(MealLog item) {
+  if (item.imageBase64.isEmpty) {
+    return const AssetImage('assets/images/meal.jpg');
+  }
+
+  try {
+    return MemoryImage(base64Decode(item.imageBase64));
+  } catch (_) {
+    return const AssetImage('assets/images/meal.jpg');
+  }
 }

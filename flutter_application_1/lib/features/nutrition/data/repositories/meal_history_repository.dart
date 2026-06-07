@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -37,21 +40,38 @@ class MealHistoryRepository {
         result: MealResult.fromJson(
           Map<String, dynamic>.from(data['result'] as Map? ?? {}),
         ),
+        imageBase64: data['imageBase64'] as String? ?? '',
+        imageMimeType: data['imageMimeType'] as String? ?? 'image/jpeg',
       );
     }).toList(growable: false);
   }
 
-  Future<MealLog?> add(MealResult result) async {
+  Future<MealLog> add(
+    MealResult result, {
+    Uint8List? imageBytes,
+    String imageMimeType = 'image/jpeg',
+  }) async {
     final user = _auth.currentUser;
-    if (user == null) return null;
+    if (user == null) {
+      throw StateError('User must be signed in to save meals.');
+    }
 
     final createdAt = DateTime.now();
     final doc = _mealCollection(user.uid).doc();
-    final log = MealLog(id: doc.id, createdAt: createdAt, result: result);
+    final imageBase64 = imageBytes == null ? '' : base64Encode(imageBytes);
+    final log = MealLog(
+      id: doc.id,
+      createdAt: createdAt,
+      result: result,
+      imageBase64: imageBase64,
+      imageMimeType: imageMimeType,
+    );
 
     await doc.set({
       'createdAt': Timestamp.fromDate(createdAt),
       'result': result.toJson(),
+      'imageBase64': imageBase64,
+      'imageMimeType': imageMimeType,
     });
 
     return log;

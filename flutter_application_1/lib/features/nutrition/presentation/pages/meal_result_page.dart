@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -15,6 +18,7 @@ class MealResultPage extends ConsumerStatefulWidget {
 
 class _MealResultPageState extends ConsumerState<MealResultPage> {
   bool _saved = false;
+  bool _saving = false;
 
   @override
   Widget build(BuildContext context) {
@@ -26,6 +30,8 @@ class _MealResultPageState extends ConsumerState<MealResultPage> {
         ? payload['result'] as MealResult
         : extra as MealResult;
     final isReadOnly = payload?['readOnly'] == true;
+    final imageBytes = _imageBytesFromPayload(payload);
+    final imageMimeType = payload?['imageMimeType'] as String? ?? 'image/jpeg';
 
     return Scaffold(
       body: Container(
@@ -66,12 +72,7 @@ class _MealResultPageState extends ConsumerState<MealResultPage> {
                     children: [
                       ClipRRect(
                         borderRadius: BorderRadius.circular(18),
-                        child: Image.asset(
-                          'assets/images/meal.jpg',
-                          height: 180,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                        ),
+                        child: _MealPhoto(bytes: imageBytes, height: 180),
                       ),
                       const SizedBox(height: 12),
                       Row(
@@ -167,33 +168,47 @@ class _MealResultPageState extends ConsumerState<MealResultPage> {
                           borderRadius: BorderRadius.circular(20),
                         ),
                       ),
-                      onPressed: _saved
+                      onPressed: _saved || _saving
                           ? null
                           : () async {
-                              setState(() => _saved = true);
-                              final history =
-                                  ref.read(mealHistoryProvider).valueOrNull ??
-                                  const [];
-                              final last = history.isEmpty ? null : history.first;
-                              final isFastDuplicate = last != null &&
-                                  last.result.title == result.title &&
-                                  last.result.calories == result.calories &&
-                                  DateTime.now()
-                                          .difference(last.createdAt)
-                                          .inSeconds <
-                                      30;
-                              if (!isFastDuplicate) {
+                              setState(() => _saving = true);
+                              try {
                                 await ref
                                     .read(mealHistoryProvider.notifier)
-                                    .add(result);
+                                    .add(
+                                      result,
+                                      imageBytes: imageBytes,
+                                      imageMimeType: imageMimeType,
+                                    );
+                                if (!mounted) return;
+                                setState(() {
+                                  _saved = true;
+                                  _saving = false;
+                                });
+                                context.go(AppRoutes.mealHistory);
+                              } catch (error) {
+                                if (!mounted) return;
+                                setState(() => _saving = false);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Could not save meal: $error'),
+                                  ),
+                                );
                               }
-                              if (!context.mounted) return;
-                              context.go(AppRoutes.mealHistory);
                             },
-                      child: const Text(
-                        'Save',
-                        style: TextStyle(fontWeight: FontWeight.w900),
-                      ),
+                      child: _saving
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.6,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text(
+                              'Save',
+                              style: TextStyle(fontWeight: FontWeight.w900),
+                            ),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -224,6 +239,53 @@ class _MealResultPageState extends ConsumerState<MealResultPage> {
           ),
         ),
       ),
+    );
+  }
+}
+
+Uint8List? _imageBytesFromPayload(Map<String, dynamic>? payload) {
+  if (payload == null) return null;
+  final bytes = payload['imageBytes'];
+  if (bytes is Uint8List) return bytes;
+
+  final imageBase64 = payload['imageBase64'];
+  if (imageBase64 is String && imageBase64.isNotEmpty) {
+    try {
+      return base64Decode(imageBase64);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  return null;
+}
+
+class _MealPhoto extends StatelessWidget {
+  final Uint8List? bytes;
+  final double height;
+
+  const _MealPhoto({
+    required this.bytes,
+    required this.height,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final imageBytes = bytes;
+    if (imageBytes == null) {
+      return Image.asset(
+        'assets/images/meal.jpg',
+        height: height,
+        width: double.infinity,
+        fit: BoxFit.cover,
+      );
+    }
+
+    return Image.memory(
+      imageBytes,
+      height: height,
+      width: double.infinity,
+      fit: BoxFit.cover,
     );
   }
 }

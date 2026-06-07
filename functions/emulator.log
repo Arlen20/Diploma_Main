@@ -1,0 +1,108 @@
+
+> serve
+> firebase emulators:start --only functions --project diploma-fitness-app --config ../firebase.json
+
+[33m[1m!  emulators:[22m[39m You are not currently authenticated so some features may not work correctly. Please run [1mfirebase login[22m to authenticate the CLI.
+[36m[1mi  emulators:[22m[39m Starting emulators: functions
+[33m[1m!  functions:[22m[39m The following emulators are not running, calls to these services from the Functions emulator will affect production: [1mapphosting, auth, firestore, database, hosting, pubsub, storage, dataconnect[22m
+[33m[1m!  functions:[22m[39m Unable to fetch project Admin SDK configuration, Admin SDK behavior in Cloud Functions emulator may be incorrect.
+[36m[1mi  functions:[22m[39m Watching "C:\Users\Nurbol\OneDrive\Рабочий стол\Diploma_GYM\Diploma_Main\functions" for Cloud Functions...
+[33m[1m! [22m[39m [1m[33mfunctions: [39m[22mpackage.json indicates an outdated version of firebase-functions. Please upgrade using [1mnpm install --save firebase-functions@latest[22m in your functions directory.
+[33m[1m! [22m[39m [1m[33mfunctions: [39m[22mPlease note that there will be breaking changes when you upgrade.
+[33m[1m!  functions:[22m[39m Your requested "node" version "20" doesn't match your global version "22". Using node@22 from host.
+[36m[1mi [22m[39m [36m[1mfunctions: [22m[39mLoaded environment variables from .env.
+Serving at port 8583
+
+[32m[1m+  functions:[22m[39m Loaded functions definitions from source: analyzeMeal.
+[32m[1m+  functions[us-central1-analyzeMeal]:[22m[39m [1mhttp[22m function initialized (http://127.0.0.1:5001/diploma-fitness-app/us-central1/analyzeMeal).
+
+[90m┌─────────────────────────────────────────────────────────────┐[39m
+[90m│[39m [32m✔[39m  [1mAll emulators ready! It is now safe to connect your app.[22m [90m│[39m
+[90m│[39m [36mi[39m  View Emulator UI at [4m[1mhttp://127.0.0.1:4000/[22m[24m               [90m│[39m
+[90m└─────────────────────────────────────────────────────────────┘[39m
+
+[90m┌───────────[39m[90m┬────────────────[39m[90m┬─────────────────────────────────┐[39m
+[90m│[39m[33m Emulator  [39m[90m│[39m[33m Host:Port      [39m[90m│[39m[33m View in Emulator UI             [39m[90m│[39m
+[90m├───────────[39m[90m┼────────────────[39m[90m┼─────────────────────────────────┤[39m
+[90m│[39m Functions [90m│[39m 127.0.0.1:5001 [90m│[39m [4m[1mhttp://127.0.0.1:4000/functions[22m[24m [90m│[39m
+[90m└───────────[39m[90m┴────────────────[39m[90m┴─────────────────────────────────┘[39m
+[90m  Emulator Hub host: 127.0.0.1 port: 4400[39m
+[90m  Other reserved ports:[39m 4500
+
+Issues? Report them at [4m[1mhttps://github.com/firebase/firebase-tools/issues[22m[24m and attach the *-debug.log files.
+ 
+[36m[1mi [22m[39m [36m[1mfunctions: [22m[39mLoaded environment variables from .env.
+[36m[1mi [22m[39m [36m[1mfunctions: [22m[39mLoaded environment variables from .env.
+[90m> [39m (node:23496) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+[90m> [39m (Use `node --trace-deprecation ...` to show where the warning was created)
+[90m> [39m (node:1316) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+[90m> [39m (Use `node --trace-deprecation ...` to show where the warning was created)
+[36m[1mi  functions:[22m[39m Beginning execution of "us-central1-analyzeMeal"
+[36m[1mi  functions:[22m[39m Beginning execution of "us-central1-analyzeMeal"
+[36m[1mi  functions:[22m[39m Finished "us-central1-analyzeMeal" in 6.2309ms
+[36m[1mi  functions:[22m[39m Beginning execution of "us-central1-analyzeMeal"
+[36m[1mi  functions:[22m[39m Finished "us-central1-analyzeMeal" in 4.3063ms
+[90m> [39m {"severity":"ERROR","message":"Meal analysis failed Error: Unable to process input image. Please retry or report in https://developers.generativeai.google/guide/troubleshooting\n    at analyzeMealWithGemini (C:\\Users\\Nurbol\\OneDrive\\Рабочий стол\\Diploma_GYM\\Diploma_Main\\functions\\index.js:80:11)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async C:\\Users\\Nurbol\\OneDrive\\Рабочий стол\\Diploma_GYM\\Diploma_Main\\functions\\index.js:36:25\n    at async runFunction (C:\\Users\\Nurbol\\OneDrive\\Рабочий стол\\Diploma_GYM\\Diploma_Main\\functions\\node_modules\\firebase-tools\\lib\\emulator\\functionsEmulatorRuntime.js:400:9)\n    at async runHTTPS (C:\\Users\\Nurbol\\OneDrive\\Рабочий стол\\Diploma_GYM\\Diploma_Main\\functions\\node_modules\\firebase-tools\\lib\\emulator\\functionsEmulatorRuntime.js:425:5)\n    at async C:\\Users\\Nurbol\\OneDrive\\Рабочий стол\\Diploma_GYM\\Diploma_Main\\functions\\node_modules\\firebase-tools\\lib\\emulator\\functionsEmulatorRuntime.js:592:21"}
+[36m[1mi  functions:[22m[39m Finished "us-central1-analyzeMeal" in 770.5063ms
+[33m[1m! [22m[39m [1m[33mfunctions: [39m[22mpackage.json indicates an outdated version of firebase-functions. Please upgrade using [1mnpm install --save firebase-functions@latest[22m in your functions directory.
+[33m[1m! [22m[39m [1m[33mfunctions: [39m[22mPlease note that there will be breaking changes when you upgrade.
+[33m[1m!  functions:[22m[39m Your requested "node" version "20" doesn't match your global version "22". Using node@22 from host.
+[36m[1mi [22m[39m [36m[1mfunctions: [22m[39mLoaded environment variables from .env.
+Serving at port 8379
+
+[32m[1m+  functions:[22m[39m Loaded functions definitions from source: analyzeMeal.
+[36m[1mi [22m[39m [36m[1mfunctions: [22m[39mLoaded environment variables from .env.
+[90m> [39m (node:27944) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+[90m> [39m (Use `node --trace-deprecation ...` to show where the warning was created)
+[36m[1mi  functions:[22m[39m Beginning execution of "us-central1-analyzeMeal"
+[36m[1mi  functions:[22m[39m Finished "us-central1-analyzeMeal" in 8269.3645ms
+[36m[1mi  functions:[22m[39m Beginning execution of "us-central1-analyzeMeal"
+[36m[1mi  functions:[22m[39m Finished "us-central1-analyzeMeal" in 2.2375ms
+[36m[1mi  functions:[22m[39m Beginning execution of "us-central1-analyzeMeal"
+[36m[1mi  functions:[22m[39m Finished "us-central1-analyzeMeal" in 3.1926ms
+[36m[1mi  functions:[22m[39m Beginning execution of "us-central1-analyzeMeal"
+[90m> [39m {"severity":"ERROR","message":"Meal analysis failed Error: This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\n    at analyzeMealWithGemini (C:\\Users\\Nurbol\\OneDrive\\Рабочий стол\\Diploma_GYM\\Diploma_Main\\functions\\index.js:80:11)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async C:\\Users\\Nurbol\\OneDrive\\Рабочий стол\\Diploma_GYM\\Diploma_Main\\functions\\index.js:36:25\n    at async runFunction (C:\\Users\\Nurbol\\OneDrive\\Рабочий стол\\Diploma_GYM\\Diploma_Main\\functions\\node_modules\\firebase-tools\\lib\\emulator\\functionsEmulatorRuntime.js:400:9)\n    at async runHTTPS (C:\\Users\\Nurbol\\OneDrive\\Рабочий стол\\Diploma_GYM\\Diploma_Main\\functions\\node_modules\\firebase-tools\\lib\\emulator\\functionsEmulatorRuntime.js:425:5)\n    at async C:\\Users\\Nurbol\\OneDrive\\Рабочий стол\\Diploma_GYM\\Diploma_Main\\functions\\node_modules\\firebase-tools\\lib\\emulator\\functionsEmulatorRuntime.js:592:21"}
+[36m[1mi  functions:[22m[39m Finished "us-central1-analyzeMeal" in 16038.4194ms
+[36m[1mi  functions:[22m[39m Beginning execution of "us-central1-analyzeMeal"
+[36m[1mi  functions:[22m[39m Finished "us-central1-analyzeMeal" in 3.7479ms
+[36m[1mi  functions:[22m[39m Beginning execution of "us-central1-analyzeMeal"
+[36m[1mi  functions:[22m[39m Finished "us-central1-analyzeMeal" in 2.1381ms
+[33m[1m! [22m[39m [1m[33mfunctions: [39m[22mpackage.json indicates an outdated version of firebase-functions. Please upgrade using [1mnpm install --save firebase-functions@latest[22m in your functions directory.
+[33m[1m! [22m[39m [1m[33mfunctions: [39m[22mPlease note that there will be breaking changes when you upgrade.
+[33m[1m!  functions:[22m[39m Your requested "node" version "20" doesn't match your global version "22". Using node@22 from host.
+[36m[1mi [22m[39m [36m[1mfunctions: [22m[39mLoaded environment variables from .env.
+Serving at port 8597
+
+[32m[1m+  functions:[22m[39m Loaded functions definitions from source: analyzeMeal.
+[36m[1mi [22m[39m [36m[1mfunctions: [22m[39mLoaded environment variables from .env.
+[90m> [39m (node:29400) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+[90m> [39m (Use `node --trace-deprecation ...` to show where the warning was created)
+[36m[1mi  functions:[22m[39m Beginning execution of "us-central1-analyzeMeal"
+[36m[1mi  functions:[22m[39m Finished "us-central1-analyzeMeal" in 7509.4504ms
+[36m[1mi  functions:[22m[39m Beginning execution of "us-central1-analyzeMeal"
+[36m[1mi  functions:[22m[39m Finished "us-central1-analyzeMeal" in 2.2034ms
+[36m[1mi  functions:[22m[39m Beginning execution of "us-central1-analyzeMeal"
+[36m[1mi  functions:[22m[39m Finished "us-central1-analyzeMeal" in 3.0961ms
+[36m[1mi  functions:[22m[39m Beginning execution of "us-central1-analyzeMeal"
+[36m[1mi  functions:[22m[39m Finished "us-central1-analyzeMeal" in 10088.0879ms
+[36m[1mi  functions:[22m[39m Beginning execution of "us-central1-analyzeMeal"
+[36m[1mi  functions:[22m[39m Finished "us-central1-analyzeMeal" in 2.8756ms
+[36m[1mi  functions:[22m[39m Beginning execution of "us-central1-analyzeMeal"
+[90m> [39m {"severity":"ERROR","message":"Meal analysis failed Error: This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\n    at analyzeMealWithGemini (C:\\Users\\Nurbol\\OneDrive\\Рабочий стол\\Diploma_GYM\\Diploma_Main\\functions\\index.js:82:11)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async C:\\Users\\Nurbol\\OneDrive\\Рабочий стол\\Diploma_GYM\\Diploma_Main\\functions\\index.js:36:25\n    at async runFunction (C:\\Users\\Nurbol\\OneDrive\\Рабочий стол\\Diploma_GYM\\Diploma_Main\\functions\\node_modules\\firebase-tools\\lib\\emulator\\functionsEmulatorRuntime.js:400:9)\n    at async runHTTPS (C:\\Users\\Nurbol\\OneDrive\\Рабочий стол\\Diploma_GYM\\Diploma_Main\\functions\\node_modules\\firebase-tools\\lib\\emulator\\functionsEmulatorRuntime.js:425:5)\n    at async C:\\Users\\Nurbol\\OneDrive\\Рабочий стол\\Diploma_GYM\\Diploma_Main\\functions\\node_modules\\firebase-tools\\lib\\emulator\\functionsEmulatorRuntime.js:592:21"}
+[36m[1mi  functions:[22m[39m Finished "us-central1-analyzeMeal" in 1224.8220000000001ms
+[36m[1mi  functions:[22m[39m Beginning execution of "us-central1-analyzeMeal"
+[36m[1mi  functions:[22m[39m Finished "us-central1-analyzeMeal" in 3.2802ms
+[36m[1mi  functions:[22m[39m Beginning execution of "us-central1-analyzeMeal"
+[36m[1mi  functions:[22m[39m Finished "us-central1-analyzeMeal" in 10179.0156ms
+[36m[1mi  functions:[22m[39m Beginning execution of "us-central1-analyzeMeal"
+[36m[1mi  functions:[22m[39m Finished "us-central1-analyzeMeal" in 2.8032ms
+[36m[1mi  functions:[22m[39m Beginning execution of "us-central1-analyzeMeal"
+[36m[1mi  functions:[22m[39m Finished "us-central1-analyzeMeal" in 6681.5885ms
+[36m[1mi  functions:[22m[39m Beginning execution of "us-central1-analyzeMeal"
+[36m[1mi  functions:[22m[39m Finished "us-central1-analyzeMeal" in 1.7721ms
+[36m[1mi  functions:[22m[39m Beginning execution of "us-central1-analyzeMeal"
+[36m[1mi  functions:[22m[39m Finished "us-central1-analyzeMeal" in 6996.8796999999995ms
+[36m[1mi  functions:[22m[39m Beginning execution of "us-central1-analyzeMeal"
+[36m[1mi  functions:[22m[39m Finished "us-central1-analyzeMeal" in 3.9651ms
+[36m[1mi  functions:[22m[39m Beginning execution of "us-central1-analyzeMeal"
+[36m[1mi  functions:[22m[39m Finished "us-central1-analyzeMeal" in 9670.1925ms

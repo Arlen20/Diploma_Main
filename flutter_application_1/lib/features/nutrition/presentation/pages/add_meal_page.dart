@@ -1,6 +1,9 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/core/routing/app_routes.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 
 class AddMealPage extends StatefulWidget {
   const AddMealPage({super.key});
@@ -10,21 +13,61 @@ class AddMealPage extends StatefulWidget {
 }
 
 class _AddMealPageState extends State<AddMealPage> {
-  _MealSource? _selectedSource;
+  final _picker = ImagePicker();
 
-  void _selectSource(_MealSource source) {
-    setState(() => _selectedSource = source);
+  _MealSource? _selectedSource;
+  _SelectedMealImage? _selectedImage;
+  bool _isPicking = false;
+
+  Future<void> _pickSource(_MealSource source) async {
+    setState(() {
+      _selectedSource = source;
+      _isPicking = true;
+    });
+
+    try {
+      final file = await _picker.pickImage(
+        source: source.imageSource,
+        maxWidth: 720,
+        maxHeight: 720,
+        imageQuality: 65,
+        requestFullMetadata: false,
+      );
+      if (file == null) {
+        if (!mounted) return;
+        setState(() => _isPicking = false);
+        return;
+      }
+
+      final bytes = await file.readAsBytes();
+      if (!mounted) return;
+      setState(() {
+        _selectedImage = _SelectedMealImage(
+          bytes: bytes,
+          mimeType: file.mimeType ?? _mimeTypeFromPath(file.name),
+        );
+        _isPicking = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _isPicking = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not pick image: $error')),
+      );
+    }
   }
 
   void _analyzeMeal() {
     final source = _selectedSource;
-    if (source == null) return;
+    final image = _selectedImage;
+    if (source == null || image == null) return;
 
     context.push(
       AppRoutes.analyzingMeal,
       extra: <String, dynamic>{
         'sourceLabel': source.title,
-        'previewAsset': source.previewAsset,
+        'imageBytes': image.bytes,
+        'imageMimeType': image.mimeType,
       },
     );
   }
@@ -32,6 +75,7 @@ class _AddMealPageState extends State<AddMealPage> {
   @override
   Widget build(BuildContext context) {
     final selectedSource = _selectedSource;
+    final selectedImage = _selectedImage;
 
     return Scaffold(
       body: Container(
@@ -72,6 +116,8 @@ class _AddMealPageState extends State<AddMealPage> {
                 Text(
                   selectedSource == null
                       ? 'Choose a source first, then analyze your meal.'
+                      : selectedImage == null
+                      ? 'Select an image from ${selectedSource.title}.'
                       : 'Preview your ${selectedSource.title} meal before analysis.',
                   style: TextStyle(
                     fontSize: 13,
@@ -80,14 +126,18 @@ class _AddMealPageState extends State<AddMealPage> {
                   ),
                 ),
                 const SizedBox(height: 18),
-                _PreviewCard(source: selectedSource),
+                _PreviewCard(
+                  source: selectedSource,
+                  imageBytes: selectedImage?.bytes,
+                  isPicking: _isPicking,
+                ),
                 const SizedBox(height: 16),
                 _SourceTile(
                   icon: Icons.photo_camera_outlined,
                   title: 'Take photo',
                   subtitle: 'Use your camera for a fresh capture',
                   isSelected: selectedSource == _MealSource.camera,
-                  onTap: () => _selectSource(_MealSource.camera),
+                  onTap: () => _pickSource(_MealSource.camera),
                 ),
                 const SizedBox(height: 12),
                 _SourceTile(
@@ -95,7 +145,7 @@ class _AddMealPageState extends State<AddMealPage> {
                   title: 'Upload from gallery',
                   subtitle: 'Use an existing meal photo from your device',
                   isSelected: selectedSource == _MealSource.gallery,
-                  onTap: () => _selectSource(_MealSource.gallery),
+                  onTap: () => _pickSource(_MealSource.gallery),
                 ),
                 const Spacer(),
                 Container(
@@ -120,7 +170,9 @@ class _AddMealPageState extends State<AddMealPage> {
                         width: double.infinity,
                         height: 56,
                         child: ElevatedButton(
-                          onPressed: selectedSource == null ? null : _analyzeMeal,
+                          onPressed: selectedImage == null || _isPicking
+                              ? null
+                              : _analyzeMeal,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF1B1736),
                             disabledBackgroundColor: const Color(
@@ -181,29 +233,40 @@ enum _MealSource {
   camera(
     title: 'camera capture',
     previewAsset: 'assets/images/plov.jpg',
+    imageSource: ImageSource.camera,
   ),
   gallery(
     title: 'gallery upload',
     previewAsset: 'assets/images/meal.jpg',
+    imageSource: ImageSource.gallery,
   );
 
   final String title;
   final String previewAsset;
+  final ImageSource imageSource;
 
   const _MealSource({
     required this.title,
     required this.previewAsset,
+    required this.imageSource,
   });
 }
 
 class _PreviewCard extends StatelessWidget {
   final _MealSource? source;
+  final Uint8List? imageBytes;
+  final bool isPicking;
 
-  const _PreviewCard({required this.source});
+  const _PreviewCard({
+    required this.source,
+    required this.imageBytes,
+    required this.isPicking,
+  });
 
   @override
   Widget build(BuildContext context) {
     final asset = source?.previewAsset ?? 'assets/images/meal.jpg';
+    final bytes = imageBytes;
 
     return Container(
       width: double.infinity,
@@ -220,12 +283,28 @@ class _PreviewCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(20),
             child: Stack(
               children: [
-                Image.asset(
-                  asset,
-                  height: 210,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                ),
+                bytes == null
+                    ? Image.asset(
+                        asset,
+                        height: 210,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      )
+                    : Image.memory(
+                        bytes,
+                        height: 210,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      ),
+                if (isPicking)
+                  const Positioned.fill(
+                    child: ColoredBox(
+                      color: Color(0x66000000),
+                      child: Center(
+                        child: CircularProgressIndicator(color: Colors.white),
+                      ),
+                    ),
+                  ),
                 Positioned(
                   left: 12,
                   top: 12,
@@ -253,7 +332,11 @@ class _PreviewCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            source == null ? 'No source selected' : source!.title,
+            source == null
+                ? 'No source selected'
+                : bytes == null
+                ? 'Waiting for image'
+                : source!.title,
             style: const TextStyle(
               color: Color(0xFF1C1C27),
               fontWeight: FontWeight.w900,
@@ -264,6 +347,8 @@ class _PreviewCard extends StatelessWidget {
           Text(
             source == null
                 ? 'Pick camera or gallery to prepare the meal analysis.'
+                : bytes == null
+                ? 'Choose an image to prepare the meal analysis.'
                 : 'The app will estimate calories and macros from this meal photo.',
             style: TextStyle(
               color: const Color(0xFF1C1C27).withOpacity(0.62),
@@ -276,6 +361,23 @@ class _PreviewCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class _SelectedMealImage {
+  final Uint8List bytes;
+  final String mimeType;
+
+  const _SelectedMealImage({
+    required this.bytes,
+    required this.mimeType,
+  });
+}
+
+String _mimeTypeFromPath(String path) {
+  final lower = path.toLowerCase();
+  if (lower.endsWith('.png')) return 'image/png';
+  if (lower.endsWith('.webp')) return 'image/webp';
+  return 'image/jpeg';
 }
 
 class _SourceTile extends StatelessWidget {

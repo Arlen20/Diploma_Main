@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/auth/firebase_auth_providers.dart';
@@ -21,11 +23,19 @@ class MealHistoryNotifier extends StateNotifier<AsyncValue<List<MealLog>>> {
     state = await AsyncValue.guard(_repository.load);
   }
 
-  Future<void> add(MealResult result) async {
+  Future<MealLog> add(
+    MealResult result, {
+    Uint8List? imageBytes,
+    String imageMimeType = 'image/jpeg',
+  }) async {
     final current = state.valueOrNull ?? const <MealLog>[];
-    final log = await _repository.add(result);
-    if (log == null) return;
+    final log = await _repository.add(
+      result,
+      imageBytes: imageBytes,
+      imageMimeType: imageMimeType,
+    );
     state = AsyncValue.data([log, ...current]);
+    return log;
   }
 
   Future<void> remove(String id) async {
