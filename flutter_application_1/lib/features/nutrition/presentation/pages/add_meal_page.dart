@@ -2,6 +2,9 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/core/routing/app_routes.dart';
+import 'package:flutter_application_1/core/theme/app_colors.dart';
+import 'package:flutter_application_1/core/widgets/glass_card.dart';
+import 'package:flutter_application_1/core/widgets/gradient_background.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -78,16 +81,7 @@ class _AddMealPageState extends State<AddMealPage> {
     final selectedImage = _selectedImage;
 
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFFF6F2FF), Color(0xFFD8C7FF), Color(0xFFBFA6FF)],
-          ),
-        ),
+      body: GradientBackground(
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(18, 14, 18, 18),
@@ -96,10 +90,7 @@ class _AddMealPageState extends State<AddMealPage> {
               children: [
                 IconButton(
                   onPressed: () => context.go(AppRoutes.home),
-                  icon: const Icon(
-                    Icons.arrow_back,
-                    color: Color(0xFF1C1C27),
-                  ),
+                  icon: const Icon(Icons.arrow_back, color: Colors.white),
                   splashRadius: 22,
                 ),
                 const SizedBox(height: 6),
@@ -108,7 +99,7 @@ class _AddMealPageState extends State<AddMealPage> {
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.w900,
-                    color: Color(0xFF1C1C27),
+                    color: Colors.white,
                     height: 1.0,
                   ),
                 ),
@@ -122,7 +113,7 @@ class _AddMealPageState extends State<AddMealPage> {
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
-                    color: const Color(0xFF1C1C27).withOpacity(0.60),
+                    color: Colors.white.withOpacity(0.62),
                   ),
                 ),
                 const SizedBox(height: 18),
@@ -148,76 +139,38 @@ class _AddMealPageState extends State<AddMealPage> {
                   onTap: () => _pickSource(_MealSource.gallery),
                 ),
                 const Spacer(),
-                Container(
+                SizedBox(
                   width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.92),
-                    borderRadius: BorderRadius.circular(32),
-                    border: Border.all(color: Colors.black.withOpacity(0.06)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.10),
-                        blurRadius: 28,
-                        offset: const Offset(0, -8),
+                  height: 56,
+                  child: ElevatedButton(
+                    onPressed: selectedImage == null || _isPicking
+                        ? null
+                        : _analyzeMeal,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.accent,
+                      foregroundColor: AppColors.primaryBtnText,
+                      disabledBackgroundColor: Colors.white.withOpacity(0.16),
+                      disabledForegroundColor: Colors.white.withOpacity(0.5),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
                       ),
-                    ],
+                    ),
+                    child: const Text(
+                      'Analyze meal',
+                      style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
+                    ),
                   ),
-                  padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      SizedBox(
-                        width: double.infinity,
-                        height: 56,
-                        child: ElevatedButton(
-                          onPressed: selectedImage == null || _isPicking
-                              ? null
-                              : _analyzeMeal,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF1B1736),
-                            disabledBackgroundColor: const Color(
-                              0xFF1B1736,
-                            ).withOpacity(0.35),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(18),
-                            ),
-                            elevation: 0,
-                          ),
-                          child: const Text(
-                            'Analyze meal',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w900,
-                              fontSize: 15,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 52,
-                        child: OutlinedButton(
-                          onPressed: () => context.go(AppRoutes.home),
-                          style: OutlinedButton.styleFrom(
-                            backgroundColor: Colors.white.withOpacity(0.65),
-                            side: BorderSide(
-                              color: Colors.black.withOpacity(0.12),
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(18),
-                            ),
-                          ),
-                          child: const Text(
-                            'Cancel',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w900,
-                              color: Color(0xFF1C1C27),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: OutlinedButton(
+                    onPressed: () => context.go(AppRoutes.home),
+                    child: const Text(
+                      'Cancel',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900),
+                    ),
                   ),
                 ),
               ],
@@ -268,14 +221,8 @@ class _PreviewCard extends StatelessWidget {
     final asset = source?.previewAsset ?? 'assets/images/meal.jpg';
     final bytes = imageBytes;
 
-    return Container(
-      width: double.infinity,
+    return GlassCard(
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.40),
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: Colors.white.withOpacity(0.35)),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -338,7 +285,7 @@ class _PreviewCard extends StatelessWidget {
                 ? 'Waiting for image'
                 : source!.title,
             style: const TextStyle(
-              color: Color(0xFF1C1C27),
+              color: Colors.white,
               fontWeight: FontWeight.w900,
               fontSize: 15,
             ),
@@ -351,7 +298,7 @@ class _PreviewCard extends StatelessWidget {
                 ? 'Choose an image to prepare the meal analysis.'
                 : 'The app will estimate calories and macros from this meal photo.',
             style: TextStyle(
-              color: const Color(0xFF1C1C27).withOpacity(0.62),
+              color: Colors.white.withOpacity(0.62),
               fontWeight: FontWeight.w700,
               fontSize: 12,
               height: 1.35,
@@ -398,19 +345,20 @@ class _SourceTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white.withOpacity(0.95),
+      color: Colors.white.withOpacity(isSelected ? 0.12 : 0.08),
       borderRadius: BorderRadius.circular(20),
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
         onTap: onTap,
-        child: Container(
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: isSelected
-                  ? const Color(0xFF1B1736)
-                  : Colors.black.withOpacity(0.08),
+                  ? AppColors.accent
+                  : Colors.white.withOpacity(0.14),
               width: isSelected ? 1.4 : 1,
             ),
           ),
@@ -420,10 +368,10 @@ class _SourceTile extends StatelessWidget {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1C1C27).withOpacity(0.06),
+                  color: Colors.white.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: Icon(icon, size: 18, color: const Color(0xFF1C1C27)),
+                child: Icon(icon, size: 18, color: Colors.white),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -435,7 +383,7 @@ class _SourceTile extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w900,
-                        color: Color(0xFF1C1C27),
+                        color: Colors.white,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -444,7 +392,7 @@ class _SourceTile extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 11.5,
                         fontWeight: FontWeight.w600,
-                        color: const Color(0xFF1C1C27).withOpacity(0.60),
+                        color: Colors.white.withOpacity(0.60),
                       ),
                     ),
                   ],
@@ -455,18 +403,20 @@ class _SourceTile extends StatelessWidget {
                 width: 26,
                 height: 26,
                 decoration: BoxDecoration(
-                  color: isSelected
-                      ? const Color(0xFF1B1736)
-                      : Colors.transparent,
+                  color: isSelected ? AppColors.accent : Colors.transparent,
                   borderRadius: BorderRadius.circular(999),
                   border: Border.all(
                     color: isSelected
                         ? Colors.transparent
-                        : const Color(0xFF1C1C27).withOpacity(0.24),
+                        : Colors.white.withOpacity(0.30),
                   ),
                 ),
                 child: isSelected
-                    ? const Icon(Icons.check, size: 16, color: Colors.white)
+                    ? const Icon(
+                        Icons.check,
+                        size: 16,
+                        color: AppColors.primaryBtnText,
+                      )
                     : null,
               ),
             ],

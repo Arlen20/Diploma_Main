@@ -5,7 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_application_1/core/routing/app_routes.dart';
+import 'package:share_plus/share_plus.dart';
 
+import '../../domain/entities/meal_log.dart';
 import '../../domain/entities/meal_result.dart';
 import '../state/meal_history_notifier.dart';
 
@@ -19,6 +21,15 @@ class MealResultPage extends ConsumerStatefulWidget {
 class _MealResultPageState extends ConsumerState<MealResultPage> {
   bool _saved = false;
   bool _saving = false;
+  String _category = MealCategories.defaultForTime(DateTime.now());
+
+  Future<void> _share(MealResult r) async {
+    final text =
+        '${r.title} — ${r.calories} kcal\n'
+        'Protein ${r.protein}g · Carbs ${r.carbs}g · Fat ${r.fat}g\n'
+        'Tracked with my fitness app 💪';
+    await SharePlus.instance.share(ShareParams(text: text));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,6 +43,7 @@ class _MealResultPageState extends ConsumerState<MealResultPage> {
     final isReadOnly = payload?['readOnly'] == true;
     final imageBytes = _imageBytesFromPayload(payload);
     final imageMimeType = payload?['imageMimeType'] as String? ?? 'image/jpeg';
+    final savedCategory = payload?['category'] as String? ?? '';
 
     return Scaffold(
       body: Container(
@@ -39,9 +51,9 @@ class _MealResultPageState extends ConsumerState<MealResultPage> {
         height: double.infinity,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFFF6F2FF), Color(0xFFD8C7FF), Color(0xFFBFA6FF)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF2B2352), Color(0xFF1B1736)],
           ),
         ),
         child: SafeArea(
@@ -51,21 +63,38 @@ class _MealResultPageState extends ConsumerState<MealResultPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 6),
-                Text(
-                  isReadOnly ? 'Saved meal details' : 'Estimated nutrition',
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                    color: Color(0xFF1C1C27),
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        isReadOnly ? 'Saved meal details' : 'Estimated nutrition',
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => _share(result),
+                      icon: const Icon(Icons.ios_share_rounded,
+                          color: Colors.white),
+                      tooltip: 'Share',
+                    ),
+                  ],
                 ),
+                if (isReadOnly && savedCategory.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  _CategoryPill(label: savedCategory),
+                ],
                 const SizedBox(height: 14),
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.85),
+                    color: Colors.white.withOpacity(0.08),
                     borderRadius: BorderRadius.circular(26),
+                    border: Border.all(color: Colors.white.withOpacity(0.14)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -96,7 +125,7 @@ class _MealResultPageState extends ConsumerState<MealResultPage> {
                             style: const TextStyle(
                               fontSize: 28,
                               fontWeight: FontWeight.w900,
-                              color: Color(0xFF1C1C27),
+                              color: Colors.white,
                             ),
                           ),
                           const Text(
@@ -104,13 +133,13 @@ class _MealResultPageState extends ConsumerState<MealResultPage> {
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w900,
-                              color: Color(0xFF1C1C27),
+                              color: Colors.white,
                             ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 10),
-                      Divider(color: const Color(0xFF1C1C27).withOpacity(0.10)),
+                      Divider(color: Colors.white.withOpacity(0.12)),
                       const SizedBox(height: 12),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -145,7 +174,8 @@ class _MealResultPageState extends ConsumerState<MealResultPage> {
                     height: 56,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF1B1736),
+                        backgroundColor: const Color(0xFFF3F0B6),
+                        foregroundColor: const Color(0xFF1B1736),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(20),
                         ),
@@ -158,12 +188,55 @@ class _MealResultPageState extends ConsumerState<MealResultPage> {
                     ),
                   ),
                 ] else ...[
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Meal type',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.75),
+                        fontWeight: FontWeight.w800,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: MealCategories.all.map((category) {
+                      final selected = _category == category;
+                      return ChoiceChip(
+                        label: Text(category),
+                        selected: selected,
+                        onSelected: (_) => setState(() => _category = category),
+                        showCheckmark: false,
+                        selectedColor: const Color(0xFFF3F0B6),
+                        backgroundColor: Colors.white.withOpacity(0.10),
+                        side: BorderSide(
+                          color: selected
+                              ? const Color(0xFFF3F0B6)
+                              : Colors.white.withOpacity(0.20),
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        labelStyle: TextStyle(
+                          color: selected
+                              ? const Color(0xFF1B1736)
+                              : Colors.white,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      );
+                    }).toList(growable: false),
+                  ),
+                  const SizedBox(height: 14),
                   SizedBox(
                     width: double.infinity,
                     height: 56,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF1B1736),
+                        backgroundColor: const Color(0xFFF3F0B6),
+                        foregroundColor: const Color(0xFF1B1736),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(20),
                         ),
@@ -179,6 +252,7 @@ class _MealResultPageState extends ConsumerState<MealResultPage> {
                                       result,
                                       imageBytes: imageBytes,
                                       imageMimeType: imageMimeType,
+                                      category: _category,
                                     );
                                 if (!mounted) return;
                                 setState(() {
@@ -202,7 +276,7 @@ class _MealResultPageState extends ConsumerState<MealResultPage> {
                               height: 22,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2.6,
-                                color: Colors.white,
+                                color: Color(0xFF1B1736),
                               ),
                             )
                           : const Text(
@@ -217,8 +291,6 @@ class _MealResultPageState extends ConsumerState<MealResultPage> {
                     height: 56,
                     child: OutlinedButton(
                       style: OutlinedButton.styleFrom(
-                        backgroundColor: Colors.white.withOpacity(0.70),
-                        side: BorderSide(color: Colors.black.withOpacity(0.10)),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(20),
                         ),
@@ -226,10 +298,7 @@ class _MealResultPageState extends ConsumerState<MealResultPage> {
                       onPressed: () => context.go(AppRoutes.addMeal),
                       child: const Text(
                         'Edit',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w900,
-                          color: Color(0xFF1C1C27),
-                        ),
+                        style: TextStyle(fontWeight: FontWeight.w900),
                       ),
                     ),
                   ),
@@ -290,6 +359,32 @@ class _MealPhoto extends StatelessWidget {
   }
 }
 
+class _CategoryPill extends StatelessWidget {
+  final String label;
+
+  const _CategoryPill({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white.withOpacity(0.20)),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w800,
+          fontSize: 12,
+        ),
+      ),
+    );
+  }
+}
+
 class _MacroChip extends StatelessWidget {
   final Color color;
   final IconData icon;
@@ -324,7 +419,7 @@ class _MacroChip extends StatelessWidget {
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w900,
-              color: Color(0xFF1C1C27),
+              color: Colors.white,
             ),
           ),
           Text(
@@ -332,7 +427,7 @@ class _MacroChip extends StatelessWidget {
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w700,
-              color: const Color(0xFF1C1C27).withOpacity(0.55),
+              color: Colors.white.withOpacity(0.55),
             ),
           ),
         ],

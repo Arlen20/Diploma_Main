@@ -27,12 +27,14 @@ class MealHistoryNotifier extends StateNotifier<AsyncValue<List<MealLog>>> {
     MealResult result, {
     Uint8List? imageBytes,
     String imageMimeType = 'image/jpeg',
+    String category = '',
   }) async {
     final current = state.valueOrNull ?? const <MealLog>[];
     final log = await _repository.add(
       result,
       imageBytes: imageBytes,
       imageMimeType: imageMimeType,
+      category: category,
     );
     state = AsyncValue.data([log, ...current]);
     return log;

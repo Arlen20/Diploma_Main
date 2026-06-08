@@ -1,11 +1,26 @@
 import 'meal_result.dart';
 
+/// Meal categories used to tag a logged meal.
+class MealCategories {
+  static const all = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
+
+  /// Picks a sensible default based on the time of day.
+  static String defaultForTime(DateTime time) {
+    final h = time.hour;
+    if (h < 11) return 'Breakfast';
+    if (h < 16) return 'Lunch';
+    if (h < 21) return 'Dinner';
+    return 'Snack';
+  }
+}
+
 class MealLog {
   final String id;
   final DateTime createdAt;
   final MealResult result;
   final String imageBase64;
   final String imageMimeType;
+  final String category;
 
   const MealLog({
     required this.id,
@@ -13,6 +28,7 @@ class MealLog {
     required this.result,
     this.imageBase64 = '',
     this.imageMimeType = 'image/jpeg',
+    this.category = '',
   });
 
   Map<String, dynamic> toJson() => {
@@ -21,6 +37,7 @@ class MealLog {
         'result': result.toJson(),
         'imageBase64': imageBase64,
         'imageMimeType': imageMimeType,
+        'category': category,
       };
 
   factory MealLog.fromJson(Map<String, dynamic> json) {
@@ -32,6 +49,7 @@ class MealLog {
       ),
       imageBase64: json['imageBase64'] as String? ?? '',
       imageMimeType: json['imageMimeType'] as String? ?? 'image/jpeg',
+      category: json['category'] as String? ?? '',
     );
   }
 }

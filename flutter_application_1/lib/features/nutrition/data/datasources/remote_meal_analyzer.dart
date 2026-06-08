@@ -40,9 +40,13 @@ class RemoteMealAnalyzer implements MealAnalyzer {
       }
     }
 
+    // Surface the real reason (e.g. a temporary model overload) instead of a
+    // generic "backend not available" message.
+    if (lastError is MealAnalyzerException) {
+      throw lastError;
+    }
     throw MealAnalyzerException(
-      'Meal analyzer backend is not available. Start the functions emulator '
-      'or deploy Firebase Functions. Last error: $lastError',
+      "Couldn't analyze the meal. Please check your connection and try again.",
     );
   }
 
@@ -67,11 +71,17 @@ class RemoteMealAnalyzer implements MealAnalyzer {
           },
         );
 
+    if (response.statusCode == 503) {
+      throw const MealAnalyzerException(
+        'The analysis service is busy right now. Please try again in a moment.',
+      );
+    }
+
     if (response.statusCode < 200 || response.statusCode >= 300) {
       final errorMessage = _errorMessageFromBody(response.body);
       throw MealAnalyzerException(
         errorMessage ??
-            'Meal analysis failed at $endpoint with status ${response.statusCode}.',
+            'Meal analysis failed with status ${response.statusCode}.',
       );
     }
 

@@ -17,7 +17,7 @@ class AnalyzingMealPage extends StatefulWidget {
 
 class _AnalyzingMealPageState extends State<AnalyzingMealPage> {
   static const _remoteEndpoint =
-      'https://us-central1-diploma-fitness-app.cloudfunctions.net/analyzeMeal';
+      'https://analyzemeal-uob437bgka-uc.a.run.app';
   static const _localEndpoint =
       'http://127.0.0.1:5001/diploma-fitness-app/us-central1/analyzeMeal';
   static const _endpointOverride = String.fromEnvironment(
@@ -122,6 +122,15 @@ class _AnalyzingMealPageState extends State<AnalyzingMealPage> {
     setState(() => _errorMessage = message);
   }
 
+  void _retry() {
+    setState(() {
+      _errorMessage = null;
+      _stageIndex = 0;
+    });
+    _startProgress();
+    _run();
+  }
+
   @override
   Widget build(BuildContext context) {
     final payload = _payload(context);
@@ -135,9 +144,9 @@ class _AnalyzingMealPageState extends State<AnalyzingMealPage> {
         height: double.infinity,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFFF6F2FF), Color(0xFFD8C7FF), Color(0xFFBFA6FF)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF2B2352), Color(0xFF1B1736)],
           ),
         ),
         child: SafeArea(
@@ -153,7 +162,7 @@ class _AnalyzingMealPageState extends State<AnalyzingMealPage> {
                   },
                   icon: const Icon(
                     Icons.close_rounded,
-                    color: Color(0xFF1C1C27),
+                    color: Colors.white,
                   ),
                   splashRadius: 22,
                 ),
@@ -163,7 +172,7 @@ class _AnalyzingMealPageState extends State<AnalyzingMealPage> {
                   style: TextStyle(
                     fontSize: 30,
                     fontWeight: FontWeight.w900,
-                    color: Color(0xFF1C1C27),
+                    color: Colors.white,
                     height: 1.0,
                   ),
                 ),
@@ -173,7 +182,7 @@ class _AnalyzingMealPageState extends State<AnalyzingMealPage> {
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
-                    color: const Color(0xFF1C1C27).withOpacity(0.58),
+                    color: Colors.white.withOpacity(0.62),
                     height: 1.35,
                   ),
                 ),
@@ -182,8 +191,9 @@ class _AnalyzingMealPageState extends State<AnalyzingMealPage> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.80),
+                    color: Colors.white.withOpacity(0.10),
                     borderRadius: BorderRadius.circular(30),
+                    border: Border.all(color: Colors.white.withOpacity(0.14)),
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(22),
@@ -208,9 +218,9 @@ class _AnalyzingMealPageState extends State<AnalyzingMealPage> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.26),
+                      color: Colors.white.withOpacity(0.08),
                       borderRadius: BorderRadius.circular(28),
-                      border: Border.all(color: Colors.white.withOpacity(0.28)),
+                      border: Border.all(color: Colors.white.withOpacity(0.14)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -229,7 +239,7 @@ class _AnalyzingMealPageState extends State<AnalyzingMealPage> {
                                     0.18,
                                   ),
                                   valueColor: const AlwaysStoppedAnimation(
-                                    Color(0xFF1B1736),
+                                    Color(0xFFF3F0B6),
                                   ),
                                 ),
                               ),
@@ -241,7 +251,7 @@ class _AnalyzingMealPageState extends State<AnalyzingMealPage> {
                                     const Text(
                                       'AI analysis in progress',
                                       style: TextStyle(
-                                        color: Color(0xFF1C1C27),
+                                        color: Colors.white,
                                         fontWeight: FontWeight.w900,
                                         fontSize: 16,
                                       ),
@@ -250,9 +260,7 @@ class _AnalyzingMealPageState extends State<AnalyzingMealPage> {
                                     Text(
                                       _progressMessages[_stageIndex],
                                       style: TextStyle(
-                                        color: const Color(
-                                          0xFF1C1C27,
-                                        ).withOpacity(0.60),
+                                        color: Colors.white.withOpacity(0.60),
                                         fontWeight: FontWeight.w700,
                                         fontSize: 12,
                                       ),
@@ -283,29 +291,50 @@ class _AnalyzingMealPageState extends State<AnalyzingMealPage> {
                           Text(
                             'Please wait a few seconds. You will be redirected automatically when the analysis is ready.',
                             style: TextStyle(
-                              color: const Color(0xFF1C1C27).withOpacity(0.56),
+                              color: Colors.white.withOpacity(0.56),
                               fontWeight: FontWeight.w700,
                               fontSize: 12,
                               height: 1.35,
                             ),
                           )
                         else
-                          SizedBox(
-                            width: double.infinity,
-                            height: 52,
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF1B1736),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(18),
+                          Column(
+                            children: [
+                              SizedBox(
+                                width: double.infinity,
+                                height: 52,
+                                child: ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFFF3F0B6),
+                                    foregroundColor: const Color(0xFF1B1736),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(18),
+                                    ),
+                                  ),
+                                  onPressed: _retry,
+                                  child: const Text(
+                                    'Try again',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
                                 ),
                               ),
-                              onPressed: () => context.go(AppRoutes.addMeal),
-                              child: const Text(
-                                'Choose another photo',
-                                style: TextStyle(fontWeight: FontWeight.w900),
+                              const SizedBox(height: 10),
+                              SizedBox(
+                                width: double.infinity,
+                                height: 52,
+                                child: OutlinedButton(
+                                  onPressed: () => context.go(AppRoutes.addMeal),
+                                  child: const Text(
+                                    'Choose another photo',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                ),
                               ),
-                            ),
+                            ],
                           ),
                       ],
                     ),
@@ -357,7 +386,7 @@ class _ErrorPanel extends StatelessWidget {
               const Text(
                 'Analysis failed',
                 style: TextStyle(
-                  color: Color(0xFF1C1C27),
+                  color: Colors.white,
                   fontWeight: FontWeight.w900,
                   fontSize: 16,
                 ),
@@ -366,7 +395,7 @@ class _ErrorPanel extends StatelessWidget {
               Text(
                 message,
                 style: TextStyle(
-                  color: const Color(0xFF1C1C27).withOpacity(0.62),
+                  color: Colors.white.withOpacity(0.7),
                   fontWeight: FontWeight.w700,
                   fontSize: 12,
                   height: 1.3,
@@ -394,13 +423,13 @@ class _StageRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bgColor = isDone
-        ? const Color(0xFF1B1736)
+        ? const Color(0xFFF3F0B6)
         : isActive
-        ? const Color(0xFFF4F0B6)
-        : Colors.white.withOpacity(0.35);
+        ? Colors.white.withOpacity(0.20)
+        : Colors.white.withOpacity(0.10);
     final iconColor = isDone
-        ? Colors.white
-        : const Color(0xFF1C1C27);
+        ? const Color(0xFF1B1736)
+        : Colors.white;
 
     return Row(
       children: [
@@ -426,7 +455,7 @@ class _StageRow extends StatelessWidget {
           child: Text(
             text,
             style: TextStyle(
-              color: const Color(0xFF1C1C27).withOpacity(
+              color: Colors.white.withOpacity(
                 isDone || isActive ? 0.92 : 0.56,
               ),
               fontWeight: isDone || isActive ? FontWeight.w800 : FontWeight.w700,

@@ -12,11 +12,10 @@ service cloud.firestore {
     match /users/{userId} {
       allow read, write: if isOwner(userId);
 
-      match /meals/{mealId} {
-        allow read, write: if isOwner(userId);
-      }
-
-      match /plans/{planId} {
+      // All per-user subcollections (meals, plans, water, weights, …).
+      // Rules do not cascade, so a recursive match keeps every current and
+      // future subcollection owned by the user accessible to that user only.
+      match /{document=**} {
         allow read, write: if isOwner(userId);
       }
     }

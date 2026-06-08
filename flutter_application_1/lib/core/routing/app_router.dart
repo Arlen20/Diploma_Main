@@ -10,11 +10,14 @@ import 'package:flutter_application_1/features/auth/presentation/pages/forgot_pa
 import 'package:flutter_application_1/features/auth/presentation/pages/login_page.dart';
 import 'package:flutter_application_1/features/auth/presentation/pages/register_page.dart';
 import 'package:flutter_application_1/features/auth/presentation/pages/verification_success_page.dart';
+import 'package:flutter_application_1/features/achievements/presentation/pages/achievements_page.dart';
 import 'package:flutter_application_1/features/home/presentation/pages/home_shell_page.dart';
 import 'package:flutter_application_1/features/nutrition/presentation/pages/add_meal_page.dart';
 import 'package:flutter_application_1/features/nutrition/presentation/pages/analyzing_meal_page.dart';
+import 'package:flutter_application_1/features/nutrition/presentation/pages/calendar_page.dart';
 import 'package:flutter_application_1/features/nutrition/presentation/pages/meal_history_page.dart';
 import 'package:flutter_application_1/features/nutrition/presentation/pages/meal_result_page.dart';
+import 'package:flutter_application_1/features/weight/presentation/pages/weight_log_page.dart';
 import 'package:flutter_application_1/features/plan/presentation/pages/training_success_page.dart';
 import 'package:flutter_application_1/features/onboarding/presentation/pages/onboarding_finish_page.dart';
 import 'package:flutter_application_1/features/onboarding/presentation/pages/onboarding_goal_page.dart';
@@ -121,6 +124,18 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.settings,
         builder: (context, state) => const SettingsPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.achievements,
+        builder: (context, state) => const AchievementsPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.weightLog,
+        builder: (context, state) => const WeightLogPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.calendar,
+        builder: (context, state) => const CalendarPage(),
       ),
       GoRoute(
         path: AppRoutes.onboardingGoal,

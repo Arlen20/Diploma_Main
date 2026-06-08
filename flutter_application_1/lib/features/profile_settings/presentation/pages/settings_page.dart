@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../../../../core/auth/firebase_auth_providers.dart';
+import '../../../../core/storage/app_paths.dart';
 import '../../../../core/widgets/app_bottom_nav.dart';
 import '../../../../core/widgets/glass_card.dart';
 import '../../../../core/widgets/gradient_background.dart';
@@ -117,14 +118,17 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
       final directory = await getApplicationDocumentsDirectory();
       final extension = pickedImage.path.split('.').last;
-      final avatarFile = File(
-        '${directory.path}/avatar_${currentProfile.uid}.$extension',
-      );
+      final fileName = 'avatar_${currentProfile.uid}.$extension';
+      final avatarFile = File('${directory.path}/$fileName');
       await File(pickedImage.path).copy(avatarFile.path);
 
+      // The filename is reused, so drop any cached bytes for the old image.
+      await FileImage(avatarFile).evict();
+
+      // Store only the filename; the absolute path is rebuilt at display time.
       await ref
           .read(userProfileProvider.notifier)
-          .save(currentProfile.copyWith(avatarLocalPath: avatarFile.path));
+          .save(currentProfile.copyWith(avatarLocalPath: fileName));
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
@@ -257,7 +261,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                           const SizedBox(height: 12),
                           Center(
                             child: _AvatarPicker(
-                              avatarLocalPath: profile.avatarLocalPath,
+                              avatarLocalPath: resolveLocalAvatarPath(
+                                ref.watch(appDocumentsPathProvider),
+                                profile.avatarLocalPath,
+                              ),
                               isPicking: _isPickingAvatar,
                               onTap: () => _pickAvatar(profile),
                             ),

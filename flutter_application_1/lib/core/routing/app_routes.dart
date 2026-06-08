@@ -16,6 +16,9 @@ class AppRoutes {
   static const schedule = '/schedule';
   static const stats = '/stats';
   static const settings = '/settings';
+  static const achievements = '/achievements';
+  static const weightLog = '/weight-log';
+  static const calendar = '/nutrition/calendar';
   static const trainingSession = '/training-session';
   static const trainingSuccess = '/training-success';
   static const onboardingGoal = '/onboarding/goal';

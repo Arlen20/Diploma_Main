@@ -14,9 +14,9 @@ class TrainingSuccessPage extends StatelessWidget {
         height: double.infinity,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFFF6D8FF), Color(0xFF4A356D), Color(0xFF211637)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF2B2352), Color(0xFF1B1736)],
           ),
         ),
         child: SafeArea(
@@ -91,8 +91,8 @@ class TrainingSuccessPage extends StatelessWidget {
                   child: ElevatedButton(
                     onPressed: () => context.go(AppRoutes.schedule),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFDDF0F0),
-                      foregroundColor: const Color(0xFF2A2940),
+                      backgroundColor: const Color(0xFFF3F0B6),
+                      foregroundColor: const Color(0xFF1B1736),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(28),
                       ),

@@ -42,6 +42,7 @@ class MealHistoryRepository {
         ),
         imageBase64: data['imageBase64'] as String? ?? '',
         imageMimeType: data['imageMimeType'] as String? ?? 'image/jpeg',
+        category: data['category'] as String? ?? '',
       );
     }).toList(growable: false);
   }
@@ -50,6 +51,7 @@ class MealHistoryRepository {
     MealResult result, {
     Uint8List? imageBytes,
     String imageMimeType = 'image/jpeg',
+    String category = '',
   }) async {
     final user = _auth.currentUser;
     if (user == null) {
@@ -65,6 +67,7 @@ class MealHistoryRepository {
       result: result,
       imageBase64: imageBase64,
       imageMimeType: imageMimeType,
+      category: category,
     );
 
     await doc.set({
@@ -72,6 +75,7 @@ class MealHistoryRepository {
       'result': result.toJson(),
       'imageBase64': imageBase64,
       'imageMimeType': imageMimeType,
+      'category': category,
     });
 
     return log;
