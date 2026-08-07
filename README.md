@@ -7,7 +7,7 @@ The app helps users manage their health routine by combining **workout planning,
 
 ## 🚀 Download APK
 
-👉 [Download APK](./app-release.apk)
+👉 [Download APK](https://github.com/Arlen20/Diploma_Main/releases/tag/v1.0.0)
 
 > You can install the APK on your Android device and test the application.
 
