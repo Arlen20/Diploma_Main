@@ -143,9 +143,3 @@ This data is used to personalize the experience.
 This project was developed as a **diploma project**.
 It demonstrates the ability to build a full-featured mobile application using modern technologies and architecture patterns.
 
----
-
-## 👨‍💻 Author
-
-Your Name
-GitHub: https://github.com/your-username
