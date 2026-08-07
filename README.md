@@ -132,12 +132,6 @@ This data is used to personalize the experience.
 
 ---
 
-## 📸 Screenshots
-
-*(Add screenshots here if available)*
-
----
-
 ## 📌 Project Purpose
 
 This project was developed as a **diploma project**.
